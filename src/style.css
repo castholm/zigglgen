@@ -1,0 +1,28 @@
+:root {
+  color-scheme: light dark;
+}
+
+[hidden] {
+  display: none !important;
+}
+
+form {
+  display: inline-flex;
+  flex-direction: column;
+  gap: 0.5em;
+  align-items: flex-start;
+}
+
+form > label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125em;
+  align-items: flex-start;
+}
+
+form > .buttons {
+  display: flex;
+  flex-direction: row;
+  gap: 0.5em;
+  align-items: flex-start;
+}
