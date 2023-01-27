@@ -9,6 +9,7 @@ const $form = document.getElementById("form") as HTMLFormElement
 const $apiVersionProfile = $form.querySelector("[name=api_version_profile]")! as HTMLSelectElement
 const $extensions = $form.querySelector("[name=extension]")! as HTMLSelectElement
 const $preview = document.getElementById("preview")!
+const $previewOutlet = $preview.querySelector("code")!
 
 let previousApi: string | null = null
 $apiVersionProfile.addEventListener("change", () => {
@@ -39,7 +40,8 @@ $form.addEventListener("submit", e => {
   const code = generateCode(features, $apiVersionProfile.selectedOptions.item(0)!.textContent!)
   switch ((e.submitter as HTMLInputElement).value) {
   case "Preview":
-    $preview.textContent = code
+    $preview.hidden = false
+    $previewOutlet.textContent = code
     break
   case "Download":
     const $a = document.createElement("a")

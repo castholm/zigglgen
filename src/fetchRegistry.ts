@@ -35,7 +35,7 @@ export async function fetchRegistry(url: string | URL): Promise<Registry> {
       profiles: [...new Set(
         [...$root.querySelectorAll(`:scope > feature[api=${key}] > *[profile]`)]
           .map($ => $.getAttribute("profile")!),
-      )].sort((a, b) => compare(b, a)),
+      )].sort(compare),
       extensions: [...new Set(
         [...$root.querySelectorAll(":scope > extensions > extension")]
           .filter($ => $.getAttribute("supported")!.split("|").includes(key))

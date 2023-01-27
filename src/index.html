@@ -7,65 +7,81 @@
 <script type="module" src="main.ts"></script><link rel="stylesheet" href="style.css"></head>
 
 <main>
-  <hgroup>
-    <h1>zigglgen 0.1</h1>
-    <p>Zig OpenGL binding generator (<a href="https://github.com/castholm/zigglgen">GitHub repo</a>)
-  </hgroup>
-  <p id="loading">Loading...
-  <form id="form" hidden>
-    <label>OpenGL API, version and profile:
-      <select name="api_version_profile">
-        <optgroup label="OpenGL">
-          <option value="gl,1.0">OpenGL 1.0</option>
-          <option value="gl,1.1">OpenGL 1.1</option>
-          <option value="gl,1.2">OpenGL 1.2</option>
-          <option value="gl,1.3">OpenGL 1.3</option>
-          <option value="gl,1.4">OpenGL 1.4</option>
-          <option value="gl,1.5">OpenGL 1.5</option>
-          <option value="gl,2.0">OpenGL 2.0</option>
-          <option value="gl,2.1">OpenGL 2.1</option>
-          <option value="gl,3.0">OpenGL 3.0</option>
-          <option value="gl,3.1">OpenGL 3.1</option>
-          <option value="gl,3.2,core">OpenGL 3.2 (Core Profile)</option>
-          <option value="gl,3.2,compatibility">OpenGL 3.2 (Compatibility Profile)</option>
-          <option value="gl,3.3,core">OpenGL 3.3 (Core Profile)</option>
-          <option value="gl,3.3,compatibility">OpenGL 3.3 (Compatibility Profile)</option>
-          <option value="gl,4.0,core">OpenGL 4.0 (Core Profile)</option>
-          <option value="gl,4.0,compatibility">OpenGL 4.0 (Compatibility Profile)</option>
-          <option value="gl,4.1,core" selected>OpenGL 4.1 (Core Profile)</option>
-          <option value="gl,4.1,compatibility">OpenGL 4.1 (Compatibility Profile)</option>
-          <option value="gl,4.2,core">OpenGL 4.2 (Core Profile)</option>
-          <option value="gl,4.2,compatibility">OpenGL 4.2 (Compatibility Profile)</option>
-          <option value="gl,4.3,core">OpenGL 4.3 (Core Profile)</option>
-          <option value="gl,4.3,compatibility">OpenGL 4.3 (Compatibility Profile)</option>
-          <option value="gl,4.4,core">OpenGL 4.4 (Core Profile)</option>
-          <option value="gl,4.4,compatibility">OpenGL 4.4 (Compatibility Profile)</option>
-          <option value="gl,4.5,core">OpenGL 4.5 (Core Profile)</option>
-          <option value="gl,4.5,compatibility">OpenGL 4.5 (Compatibility Profile)</option>
-          <option value="gl,4.6,core">OpenGL 4.6 (Core Profile)</option>
-          <option value="gl,4.6,compatibility">OpenGL 4.6 (Compatibility Profile)</option>
-        </optgroup>
-        <optgroup label="OpenGL ES">
-          <!-- 1.0 in the value is not a typo. -->
-          <option value="gles1,1.0,common">OpenGL ES 1.1 (Common Profile)</option>
-          <option value="gles2,2.0">OpenGL ES 2.0</option>
-          <option value="gles2,3.0">OpenGL ES 3.0</option>
-          <option value="gles2,3.1">OpenGL ES 3.1</option>
-          <option value="gles2,3.2">OpenGL ES 3.2</option>
-        </optgroup>
-        <optgroup label="OpenGL SC">
-          <option value="glsc2,2.0">OpenGL SC 2.0</option>
-        </optgroup>
-      </select>
-    </label>
-    <label>Extensions:
-      <select multiple name="extension" size=10></select>
-    </label>
-    <div class="buttons">
-      <input type="submit" value="Preview">
-      <input type="submit" value="Download">
-    </div>
-  </form>
+
+<hgroup>
+  <h1>zigglgen 0.1</h1>
+  <p>Zig OpenGL binding generator
+</hgroup>
+
+<p>After downloading the generated source file, run <kbd>zig fmt</kbd> on it to remove unnecessary <code>@""</code> from
+identifiers.
+
+<p>See the <a href="https://github.com/castholm/zigglgen">GitHub repository</a> for more information.
+
+<hr>
+
+<p id="loading">Loading...
+
+<noscript><p>Scripting must be enabled in order to use this generator.</noscript>
+
+<form id="form" hidden>
+  <label>API, version and profile
+    <select name="api_version_profile">
+      <optgroup label="OpenGL">
+        <option value="gl,1.0">OpenGL 1.0</option>
+        <option value="gl,1.1">OpenGL 1.1</option>
+        <option value="gl,1.2">OpenGL 1.2</option>
+        <option value="gl,1.3">OpenGL 1.3</option>
+        <option value="gl,1.4">OpenGL 1.4</option>
+        <option value="gl,1.5">OpenGL 1.5</option>
+        <option value="gl,2.0">OpenGL 2.0</option>
+        <option value="gl,2.1">OpenGL 2.1</option>
+        <option value="gl,3.0">OpenGL 3.0</option>
+        <option value="gl,3.1">OpenGL 3.1</option>
+        <option value="gl,3.2,core">OpenGL 3.2 (Core Profile)</option>
+        <option value="gl,3.2,compatibility">OpenGL 3.2 (Compatibility Profile)</option>
+        <option value="gl,3.3,core">OpenGL 3.3 (Core Profile)</option>
+        <option value="gl,3.3,compatibility">OpenGL 3.3 (Compatibility Profile)</option>
+        <option value="gl,4.0,core">OpenGL 4.0 (Core Profile)</option>
+        <option value="gl,4.0,compatibility">OpenGL 4.0 (Compatibility Profile)</option>
+        <option value="gl,4.1,core" selected>OpenGL 4.1 (Core Profile)</option>
+        <option value="gl,4.1,compatibility">OpenGL 4.1 (Compatibility Profile)</option>
+        <option value="gl,4.2,core">OpenGL 4.2 (Core Profile)</option>
+        <option value="gl,4.2,compatibility">OpenGL 4.2 (Compatibility Profile)</option>
+        <option value="gl,4.3,core">OpenGL 4.3 (Core Profile)</option>
+        <option value="gl,4.3,compatibility">OpenGL 4.3 (Compatibility Profile)</option>
+        <option value="gl,4.4,core">OpenGL 4.4 (Core Profile)</option>
+        <option value="gl,4.4,compatibility">OpenGL 4.4 (Compatibility Profile)</option>
+        <option value="gl,4.5,core">OpenGL 4.5 (Core Profile)</option>
+        <option value="gl,4.5,compatibility">OpenGL 4.5 (Compatibility Profile)</option>
+        <option value="gl,4.6,core">OpenGL 4.6 (Core Profile)</option>
+        <option value="gl,4.6,compatibility">OpenGL 4.6 (Compatibility Profile)</option>
+      </optgroup>
+      <optgroup label="OpenGL ES">
+        <!-- 1.0 in the value but 1.1 in the text content is intentional; not a typo. -->
+        <option value="gles1,1.0,common">OpenGL ES 1.1 (Common Profile)</option>
+        <option value="gles2,2.0">OpenGL ES 2.0</option>
+        <option value="gles2,3.0">OpenGL ES 3.0</option>
+        <option value="gles2,3.1">OpenGL ES 3.1</option>
+        <option value="gles2,3.2">OpenGL ES 3.2</option>
+      </optgroup>
+      <optgroup label="OpenGL SC">
+        <option value="glsc2,2.0">OpenGL SC 2.0</option>
+      </optgroup>
+    </select>
+  </label>
+  <label>Extensions
+    <select multiple name="extension" size=10></select>
+  </label>
+  <div class="buttons">
+    <input type="submit" value="Preview">
+    <input type="submit" value="Download">
+  </div>
+</form>
+
+<div id="preview" hidden>
   <hr>
-  <pre><code id="preview"></code></pre>
+  <pre><code></code></pre>
+</div>
+
 </main>

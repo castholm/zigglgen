@@ -1,28 +1,30 @@
 :root {
   color-scheme: light dark;
+  font-family: sans-serif;
+  font-size: 16px;
 }
 
 [hidden] {
   display: none !important;
 }
 
+select, input {
+  font-size: inherit;
+}
+
 form {
-  display: inline-flex;
+  display: flex;
   flex-direction: column;
-  gap: 0.5em;
+  gap: 1em;
   align-items: flex-start;
+  margin: 1em 0px;
 }
 
 form > label {
   display: flex;
   flex-direction: column;
-  gap: 0.125em;
-  align-items: flex-start;
 }
 
-form > .buttons {
-  display: flex;
-  flex-direction: row;
-  gap: 0.5em;
-  align-items: flex-start;
+pre {
+  white-space: pre-wrap;
 }

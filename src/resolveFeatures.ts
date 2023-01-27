@@ -1,15 +1,14 @@
 import type { Registry } from "./fetchRegistry.js"
 import { compare } from "./utils.js"
 
-/**
- * Type renaming algorithm (doesn't work for all identifiers):
- * ```
- * typeKey.replace(
- *   /^GL([a-z]|[A-Z]+PROC|[A-Z](?:[A-Z](?=[A-Z]|$))*)/,
- *   (...x) => x[1][0].toUpperCase() + x[1].slice(1).toLowerCase(),
- * )
- * ```
- */
+// Type renaming algorithm (doesn't work for all identifiers):
+//
+//     typeKey.replace(
+//       /^GL([a-z]|[A-Z]+PROC|[A-Z](?:[A-Z](?=[A-Z]|$))*)/,
+//       (...x) => x[1][0].toUpperCase() + x[1].slice(1).toLowerCase(),
+//     )
+//
+
 const TYPES: ReadonlyMap<string, {
   readonly key: string
   readonly name: string
@@ -48,9 +47,9 @@ const TYPES: ReadonlyMap<string, {
   ["GLclampd", "Clampd", "f64"],
   ["GLclampx", "Clampx", "i32"],
   ["GLsync", "Sync", "?*opaque {}"],
-  ["GLDEBUGPROC", "Debugproc", '?*const fn (source: Enum, type: Enum, id: Uint, severity: Enum, length: Sizei, message: [*:0]const Char, userParam: ?*const anyopaque) callconv(.C) void'],
-  ["GLDEBUGPROCARB", "DebugprocARB", '?*const fn (source: Enum, type: Enum, id: Uint, severity: Enum, length: Sizei, message: [*:0]const Char, userParam: ?*const anyopaque) callconv(.C) void'],
-  ["GLDEBUGPROCKHR", "DebugprocKHR", '?*const fn (source: Enum, type: Enum, id: Uint, severity: Enum, length: Sizei, message: [*:0]const Char, userParam: ?*const anyopaque) callconv(.C) void'],
+  ["GLDEBUGPROC", "Debugproc", '?*const fn (source: Enum, @"type": Enum, id: Uint, severity: Enum, length: Sizei, message: [*:0]const Char, userParam: ?*const anyopaque) callconv(.C) void'],
+  ["GLDEBUGPROCARB", "DebugprocARB", '?*const fn (source: Enum, @"type": Enum, id: Uint, severity: Enum, length: Sizei, message: [*:0]const Char, userParam: ?*const anyopaque) callconv(.C) void'],
+  ["GLDEBUGPROCKHR", "DebugprocKHR", '?*const fn (source: Enum, @"type": Enum, id: Uint, severity: Enum, length: Sizei, message: [*:0]const Char, userParam: ?*const anyopaque) callconv(.C) void'],
   ["GLDEBUGPROCAMD", "DebugprocAMD", "?*const fn (id: Uint, category: Enum, severity: Enum, length: Sizei, message: [*:0]const Char, userParam: ?*anyopaque) callconv(.C) void"],
   ["struct _cl_context", "ClContextARB", "opaque {}"],
   ["struct _cl_event", "ClEventARB", "opaque {}"],
@@ -141,7 +140,8 @@ export function resolveFeatures(
   })[] = []
   const resolvedCommands: (ResolvedCommand & {
     readonly params: readonly {
-      name: string // Mutable in order to rename parameters that shadow other identifiers at a later stage.
+      // Mutable in order to rename parameters that shadow other declarations after all commands have been resolved.
+      name: string
       readonly type: string
     }[]
   })[] = []
@@ -261,6 +261,8 @@ export function resolveFeatures(
         }
         let [type, pointer] = tokens[0] === "void"
           ? ["anyopaque", "?*"]
+          : tokens[0].startsWith("struct _cl_")
+          ? [TYPES.get(tokens[0])!.name, "?*"]
           : [TYPES.get(tokens[0])!.name, "[*c]"]
         for (let i = 1; i < tokens.length - 1; i++) {
           switch (tokens[i]!) {
@@ -295,7 +297,7 @@ export function resolveFeatures(
     }
     resolvedCommands.sort((a, b) => compare(a.name, b.name))
 
-    // Rename parameters that shadow other identifiers.
+    // Rename parameters that shadow other declarations.
     const declaredNames = new Set(["init", "extensionSupported", "state", ...resolvedCommands.map(x => x.name)])
     for (const command of resolvedCommands) {
       for (const param of command.params) {
