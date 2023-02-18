@@ -67,16 +67,16 @@ export function generateCode(features: ResolvedFeatures, apiProfileVersion: stri
   sb.push("\n")
   sb.push("//#region Constants\n")
   for (const constant of features.constants.values()) {
-    sb.push(`pub const @"${constant.name}" = ${constant.value};\n`)
+    sb.push(`pub const ${zigIdentifier(constant.name)} = ${constant.value};\n`)
   }
   sb.push("//#endregion Constants\n")
   sb.push("\n")
   sb.push("//#region Commands\n")
   for (const command of features.commands.values()) {
-    sb.push(`pub fn @"${command.name}"(`)
-    sb.push(command.params.map(x => `@"${x.name}": ${x.type}`).join(", "))
+    sb.push(`pub fn ${zigIdentifier(command.name)}(`)
+    sb.push(command.params.map(x => `${zigIdentifier(x.name)}: ${x.type}`).join(", "))
     sb.push(`) callconv(.C) ${command.type} {\n`)
-    sb.push(`    return @call(.always_tail, state.commands.@"${command.name}"`)
+    sb.push(`    return @call(.always_tail, state.commands.${zigIdentifier(command.name)}`)
     if (command.optional) {
       sb.push(".?")
     }
@@ -84,22 +84,20 @@ export function generateCode(features: ResolvedFeatures, apiProfileVersion: stri
     if (command.params.length > 1) {
       sb.push(" ")
     }
-    sb.push(command.params.map(x => `@"${x.name}"`).join(", "))
+    sb.push(command.params.map(x => `${zigIdentifier(x.name)}`).join(", "))
     if (command.params.length > 1) {
       sb.push(" ")
     }
     sb.push("});\n")
     sb.push("}\n")
-    sb.push("\n")
   }
-  sb.pop()
   sb.push("//#endregion Commands\n")
   sb.push("\n")
   if (hasExtensions) {
     sb.push("/// OpenGL extensions available to the OpenGL binding.\n")
     sb.push("pub const Extension = enum {\n")
     for (const extension of features.extensions.values()) {
-      sb.push(`    @"${extension.name}",\n`)
+      sb.push(`    ${zigIdentifier(extension.name)},\n`)
     }
     sb.push("};\n")
     sb.push("\n")
@@ -118,16 +116,16 @@ export function generateCode(features: ResolvedFeatures, apiProfileVersion: stri
   sb.push("        var s = State{\n")
   sb.push("            .commands = .{\n")
   for (const command of features.commands.values()) {
-    sb.push(`                .@"${command.name}" = try getCommandFnPtr("${command.name}", loader, "${command.key}"),\n`)
+    sb.push(`                .${zigIdentifier(command.name)} = try getCommandFnPtr("${command.name}", loader, "${command.key}"),\n`)
   }
   sb.push("            },\n")
   sb.push("        };\n")
   for (const extension of features.extensions.values()) {
     sb.push(`        if (try loader.extensionSupported("${extension.key}")) {\n`)
     for (const command of extension.commands.map(x => features.commands.get(x)!)) {
-      sb.push(`            s.commands.@"${command.name}" = try getCommandFnPtr("${command.name}", loader, "${command.key}");\n`)
+      sb.push(`            s.commands.${zigIdentifier(command.name)} = try getCommandFnPtr("${command.name}", loader, "${command.key}");\n`)
     }
-    sb.push(`            s.extensions.@"${extension.name}" = true;\n`)
+    sb.push(`            s.extensions.${zigIdentifier(extension.name)} = true;\n`)
     sb.push(`        }\n`)
   }
   sb.push("        return s;\n")
@@ -135,12 +133,12 @@ export function generateCode(features: ResolvedFeatures, apiProfileVersion: stri
   sb.push("\n")
   sb.push("    pub const Commands = struct {\n")
   for (const command of features.commands.values()) {
-    sb.push(`        @"${command.name}": `)
+    sb.push(`        ${zigIdentifier(command.name)}: `)
     if (command.optional) {
       sb.push("?")
     }
     sb.push("*const fn (")
-    sb.push(command.params.map(x => `@"${x.name}": ${x.type}`).join(", "))
+    sb.push(command.params.map(x => `${zigIdentifier(x.name)}: ${x.type}`).join(", "))
     sb.push(`) callconv(.C) ${command.type}`)
     if (command.optional) {
       sb.push(" = null")
@@ -152,7 +150,7 @@ export function generateCode(features: ResolvedFeatures, apiProfileVersion: stri
   if (hasExtensions) {
     sb.push("    pub const Extensions = struct {\n")
     for (const extension of features.extensions.values()) {
-      sb.push(`        @"${extension.name}": bool = false,\n`)
+      sb.push(`        ${zigIdentifier(extension.name)}: bool = false,\n`)
     }
     sb.push("    };\n")
     sb.push("\n")
@@ -176,4 +174,95 @@ export function generateCode(features: ResolvedFeatures, apiProfileVersion: stri
   sb.push("}\n")
 
   return sb.join("")
+}
+
+const ZIG_UNQUOTED_IDENTIFIER_REGEX = RegExp(`^(?!(${[
+  "_",
+
+  // https://github.com/ziglang/zig/blob/07630eb696a4c7097fadf9e0261411d591a82038/lib/std/zig/tokenizer.zig#L12-L62
+  "addrspace",
+  "align",
+  "allowzero",
+  "and",
+  "anyframe",
+  "anytype",
+  "asm",
+  "async",
+  "await",
+  "break",
+  "callconv",
+  "catch",
+  "comptime",
+  "const",
+  "continue",
+  "defer",
+  "else",
+  "enum",
+  "errdefer",
+  "error",
+  "export",
+  "extern",
+  "fn",
+  "for",
+  "if",
+  "inline",
+  "linksection",
+  "noalias",
+  "noinline",
+  "nosuspend",
+  "opaque",
+  "or",
+  "orelse",
+  "packed",
+  "pub",
+  "resume",
+  "return",
+  "struct",
+  "suspend",
+  "switch",
+  "test",
+  "threadlocal",
+  "try",
+  "union",
+  "unreachable",
+  "usingnamespace",
+  "var",
+  "volatile",
+  "while",
+
+  // https://github.com/ziglang/zig/blob/07630eb696a4c7097fadf9e0261411d591a82038/lib/std/zig/primitives.zig
+  "anyerror",
+  "anyframe",
+  "anyopaque",
+  "bool",
+  "c_int",
+  "c_long",
+  "c_longdouble",
+  "c_longlong",
+  "c_short",
+  "c_uint",
+  "c_ulong",
+  "c_ulonglong",
+  "c_ushort",
+  "comptime_float",
+  "comptime_int",
+  "f128",
+  "f16",
+  "f32",
+  "f64",
+  "f80",
+  "false",
+  "isize",
+  "noreturn",
+  "null",
+  "true",
+  "type",
+  "undefined",
+  "usize",
+  "void",
+  "([iu][0-9]+)",
+].join("|")})$)[A-Z_a-z][0-9A-Z_a-z]*$`)
+
+function zigIdentifier(identifier: string): string {
+  return ZIG_UNQUOTED_IDENTIFIER_REGEX.test(identifier) ? identifier : `@"${identifier}"`
 }

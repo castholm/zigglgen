@@ -5,21 +5,20 @@ Zig OpenGL binding generator
 ## Usage
 
 [zigglgen runs in your web browser and is available online](https://castholm.github.io/zigglgen). Simply select an API,
-version and profile and extensions and choose *Preview* or *Download* to generate a Zig binding. (Do note that zigglgen
-currently only supports the nightly 0.11.0-dev builds of Zig and that generated code might not work with earlier
-versions of the compiler.)
+version and profile and extensions and choose *Preview* or *Download* to generate a Zig binding.
 
 Functions, constants, types and extensions are stripped off their `^(gl|GL_?)` prefixes and have their capitalization
 altered slightly but are otherwise identical to their original C/C++ definitions.
 
-|Original C/C++         |Generated Zig                 |
-|-----------------------|------------------------------|
-|`glClearColor()`       |`clearColor()`                |
-|`GL_TRIANGLES`         |`TRIANGLES`                   |
-|`GLfloat`              |`Float`                       |
-|`GL_ARB_compute_shader`|`Extension.ARB_compute_shader`|
+| Original C/C++          | Generated Zig                  |
+|-------------------------|--------------------------------|
+| `glClearColor()`        | `clearColor()`                 |
+| `GL_TRIANGLES`          | `TRIANGLES`                    |
+| `GLfloat`               | `Float`                        |
+| `GL_ARB_compute_shader` | `Extension.ARB_compute_shader` |
 
-After downloading the generated source file, run `zig fmt` on it to remove unnecessary `@""` from identifiers.
+Please note that zigglgen currently only supports the nightly 0.11.0-dev builds of Zig and that generated code might not
+work with earlier versions of the compiler.
 
 ### Initialization
 
