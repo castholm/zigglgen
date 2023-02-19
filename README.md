@@ -10,12 +10,12 @@ version and profile and extensions and choose *Preview* or *Download* to generat
 Functions, constants, types and extensions are stripped off their `^(gl|GL_?)` prefixes and have their capitalization
 altered slightly but are otherwise identical to their original C/C++ definitions.
 
-| Original C/C++          | Generated Zig                  |
-|-------------------------|--------------------------------|
-| `glClearColor()`        | `clearColor()`                 |
-| `GL_TRIANGLES`          | `TRIANGLES`                    |
-| `GLfloat`               | `Float`                        |
-| `GL_ARB_compute_shader` | `Extension.ARB_compute_shader` |
+| Original C/C++        | Generated Zig                |
+|-----------------------|------------------------------|
+| `glClearColor()`      | `clearColor()`               |
+| `GL_TRIANGLES`        | `TRIANGLES`                  |
+| `GLfloat`             | `Float`                      |
+| `GL_ARB_clip_control` | `Extension.ARB_clip_control` |
 
 Please note that zigglgen currently only supports the nightly 0.11.0-dev builds of Zig and that generated code might not
 work with earlier versions of the compiler.
@@ -27,14 +27,14 @@ thread has a current OpenGL context.
 
 `loader` must be an instance, or a pointer to an instance, of a type that declares the functions
 
-- `pub fn getCommandFnPtr(loader: LoaderRef, command_name: [:0]const u8) !CommandFnPtr` and
-- `pub fn extensionSupported(loader: LoaderRef, extension_name: [:0]const u8) !bool` (if the binding was generated with
-  extensions),
+- `pub fn getCommandFnPtr(loader: LoaderRef, command_name: [:0]const u8) !?CommandFnPtr` and
+- `pub fn extensionSupported(loader: LoaderRef, extension_name: [:0]const u8) !bool` (only if the binding was generated
+  with extensions),
 
 where
 
 - `LoaderRef` is equivalent to `@This()`, `*@This()` or `*const @This()` and
-- `CommandFnPtr` is a function pointer type that can be coerced to `*const anyopaque`.
+- `CommandFnPtr` is a function pointer type that can be coerced to `*align(@alignOf(fn () void)) const anyopaque`.
 
 It is safe for the caller to free `loader` after this function returns.
 
@@ -67,8 +67,8 @@ pub fn main() !void {
     glfw.makeContextCurrent(window);
 
     try gl.init(struct {
-        pub fn getCommandFnPtr(_: @This(), command_name: [:0]const u8) !*const anyopaque {
-            return glfw.getProcAddress(command_name) orelse error.InitFailed;
+        pub fn getCommandFnPtr(_: @This(), command_name: [:0]const u8) !?glfw.GLProc {
+            return glfw.getProcAddress(command_name);
         }
         pub fn extensionSupported(_: @This(), extension_name: [:0]const u8) !bool {
             return glfw.extensionSupported(extension_name);
