@@ -17,8 +17,8 @@ altered slightly but are otherwise identical to their original C/C++ definitions
 | `GLfloat`             | `Float`                      |
 | `GL_ARB_clip_control` | `Extension.ARB_clip_control` |
 
-Please note that zigglgen currently only supports the nightly 0.11.0-dev builds of Zig and that generated code might not
-work with earlier versions of the compiler.
+Please note that zigglgen currently only officially supports the nightly 0.11.0-dev builds of Zig. Generated code is not
+guaranteed to work with earlier versions of the compiler.
 
 ### Initialization
 
@@ -34,7 +34,7 @@ thread has a current OpenGL context.
 where
 
 - `LoaderRef` is equivalent to `@This()`, `*@This()` or `*const @This()` and
-- `CommandFnPtr` is a function pointer type that can be coerced to `*align(@alignOf(fn () void)) const anyopaque`.
+- `CommandFnPtr` can be coerced to `*align(@alignOf(fn () void)) const anyopaque`.
 
 It is safe for the caller to free `loader` after this function returns.
 
@@ -58,12 +58,11 @@ pub fn main() !void {
     defer glfw.terminate();
 
     const window = glfw.Window.create(640, 480, "OpenGL is a art", null, null, .{
-        .context_version_major = 3,
-        .context_version_minor = 3,
+        .context_version_major = gl.api.version_major,
+        .context_version_minor = gl.api.version_minor,
         .opengl_profile = .opengl_core_profile,
         .opengl_forward_compat = true,
     }) orelse return error.InitFailed;
-    defer window.destroy();
     glfw.makeContextCurrent(window);
 
     try gl.init(struct {
@@ -76,8 +75,6 @@ pub fn main() !void {
     }{});
 
     while (!window.shouldClose()) {
-        glfw.pollEvents();
-
         gl.disable(gl.SCISSOR_TEST);
         if (gl.extensionSupported(.NV_scissor_exclusive)) {
             gl.disable(gl.SCISSOR_TEST_EXCLUSIVE_NV);
@@ -100,6 +97,7 @@ pub fn main() !void {
         }
 
         window.swapBuffers();
+        glfw.pollEvents();
     }
 }
 ```
