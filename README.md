@@ -1,4 +1,4 @@
-# zigglgen 0.1
+# zigglgen 0.2
 
 Zig OpenGL binding generator
 
@@ -22,85 +22,163 @@ guaranteed to work with earlier versions of the compiler.
 
 ### Initialization
 
-Before the binding can be used, it must be initialized by calling `pub fn init(loader: anytype) !void` while the calling
+Before the binding can be used, it must be initialized by calling `pub fn init(loader: anytype) void` while the calling
 thread has a current OpenGL context.
 
-`loader` must be an instance, or a pointer to an instance, of a type that declares the functions
+`loader` is duck-typed and can be either a container or an instance, so long as it satisfies the following code:
 
-- `pub fn getCommandFnPtr(loader: LoaderRef, command_name: [:0]const u8) !?CommandFnPtr` and
-- `pub fn extensionSupported(loader: LoaderRef, extension_name: [:0]const u8) !bool` (only if the binding was generated
-  with extensions),
+```zig
+const AnyFnPtr = *align(@alignOf(fn () void)) const anyopaque;
+_ = @as(?AnyFnPtr, loader.getCommandFnPtr(@as([:0]const u8, "glExample")));
 
-where
+// If the binding was generated with extensions:
+_ = @as(bool, loader.extensionSupported(@as([:0]const u8, "GL_EXT_example")));
+```
 
-- `LoaderRef` is equivalent to `@This()`, `*@This()` or `*const @This()` and
-- `CommandFnPtr` can be coerced to `*align(@alignOf(fn () void)) const anyopaque`.
-
-It is safe for the caller to free `loader` after this function returns.
+No references to `loader` are retained by the binding after `init()` returns, so it is safe for the caller to free
+resources owned by `loader` if needed.
 
 ### Extensions
 
 Extension-specific functions, constants and types are made available as top-level declarations like any other. If the
-binding was generated with extensions, you can call `pub fn extensionSupported(extension: Extension) bool` to test
-whether an extension is supported by the current OpenGL context before attempting to use it.
+binding was generated with extensions, you can call `pub inline fn extensionSupported(extension: Extension) bool` to
+test whether an extension is supported by the current OpenGL context before attempting to use it.
 
-## Example
+## Examples
 
-Using [mach/glfw](https://github.com/hexops/mach-glfw) and a binding generated with *OpenGL 3.3 (Core Profile)* and
-*NV_scissor_exclusive* selected:
+The below examples use a binding generated with *OpenGL 3.3 (Core Profile)* and *NV_scissor_exclusive* selected:
+
+### SDL2
+
+Using [zsdl](https://github.com/michal-z/zig-gamedev/tree/main/libs/zsdl):
 
 ```zig
-const glfw = @import("glfw");
-const gl = @import("gl");
+const sdl = @import("zsdl");
+const gl = @import("gl.zig");
 
 pub fn main() !void {
-    if (!glfw.init(.{})) return error.InitFailed;
-    defer glfw.terminate();
+    try sdl.init(.{ .video = true });
+    defer sdl.quit();
 
-    const window = glfw.Window.create(640, 480, "OpenGL is a art", null, null, .{
-        .context_version_major = gl.api.version_major,
-        .context_version_minor = gl.api.version_minor,
-        .opengl_profile = .opengl_core_profile,
-        .opengl_forward_compat = true,
-    }) orelse return error.InitFailed;
-    glfw.makeContextCurrent(window);
+    try sdl.gl.setAttribute(.context_profile_mask, @enumToInt(sdl.gl.Profile.compatibility));
+    try sdl.gl.setAttribute(.context_major_version, gl.info.api_version_major);
+    try sdl.gl.setAttribute(.context_minor_version, gl.info.api_version_minor);
+    try sdl.gl.setAttribute(.context_flags, @bitCast(i32, sdl.gl.ContextFlags{ .forward_compatible = true }));
+    const window = try sdl.Window.create(
+        "OpenGL is a art",
+        sdl.Window.pos_undefined,
+        sdl.Window.pos_undefined,
+        640,
+        480,
+        .{ .opengl = true },
+    );
+    defer window.destroy();
 
-    try gl.init(struct {
-        pub fn getCommandFnPtr(_: @This(), command_name: [:0]const u8) !?glfw.GLProc {
-            return glfw.getProcAddress(command_name);
+    const gl_context = try sdl.gl.createContext(window);
+    defer sdl.gl.deleteContext(gl_context);
+    try sdl.gl.makeCurrent(window, gl_context);
+    try sdl.gl.setSwapInterval(1);
+
+    gl.init(struct {
+        pub fn getCommandFnPtr(command_name: [:0]const u8) ?*anyopaque {
+            return sdl.gl.getProcAddress(command_name);
         }
-        pub fn extensionSupported(_: @This(), extension_name: [:0]const u8) !bool {
-            return glfw.extensionSupported(extension_name);
+        pub fn extensionSupported(extension_name: [:0]const u8) bool {
+            return sdl.gl.isExtensionSupported(extension_name);
         }
-    }{});
+    });
 
-    while (!window.shouldClose()) {
+    main_loop: while (true) {
+        var event: sdl.Event = undefined;
+        while (sdl.pollEvent(&event)) {
+            if (event.type == .quit) break :main_loop;
+        }
+
         gl.disable(gl.SCISSOR_TEST);
         if (gl.extensionSupported(.NV_scissor_exclusive)) {
             gl.disable(gl.SCISSOR_TEST_EXCLUSIVE_NV);
-            gl.clearColor(1, 0.8, 0.2, 1);
-            gl.clear(gl.COLOR_BUFFER_BIT);
+            gl.clearBufferfv(gl.COLOR, 0, &[_]gl.Float{ 1, 0.8, 0.2, 1 });
             gl.enable(gl.SCISSOR_TEST_EXCLUSIVE_NV);
             gl.scissorExclusiveNV(72, 56, 8, 8);
         }
-        gl.clearColor(1, 1, 1, 1);
-        gl.clear(gl.COLOR_BUFFER_BIT);
+        gl.clearBufferfv(gl.COLOR, 0, &[_]gl.Float{ 1, 1, 1, 1 });
         gl.enable(gl.SCISSOR_TEST);
-        gl.clearColor(0, 0, 0, 1);
         const magic: u256 = 0x1FF8200446024F3A8071E321B0EDAC0A9BFA56AA4BFA26AA13F20802060401F8;
         var i: gl.Int = 0;
         while (i < 256) : (i += 1) {
             if (magic >> @intCast(u8, i) & 1 != 0) {
                 gl.scissor(@rem(i, 16) * 8 + 8, @divTrunc(i, 16) * 8 + 8, 8, 8);
-                gl.clear(gl.COLOR_BUFFER_BIT);
+                gl.clearBufferfv(gl.COLOR, 0, &[_]gl.Float{ 0, 0, 0, 1 });
+            }
+        }
+
+        sdl.gl.swapWindow(window);
+    }
+}
+```
+
+### GLFW
+
+Using [mach/glfw](https://github.com/hexops/mach-glfw):
+
+<details><summary>Click to expand/collapse</summary>
+
+```zig
+const glfw = @import("glfw");
+const gl = @import("gl.zig");
+
+pub fn main() !void {
+    if (!glfw.init(.{})) return error.GlfwInitFailed;
+    defer glfw.terminate();
+
+    const window = glfw.Window.create(640, 480, "OpenGL is a art", null, null, .{
+        .context_version_major = gl.info.api_version_major,
+        .context_version_minor = gl.info.api_version_minor,
+        .opengl_profile = .opengl_core_profile,
+        .opengl_forward_compat = true,
+    }) orelse return error.GlfwInitFailed;
+    defer window.destroy();
+
+    glfw.makeContextCurrent(window);
+    glfw.swapInterval(1);
+
+    gl.init(struct {
+        pub fn getCommandFnPtr(command_name: [:0]const u8) ?glfw.GLProc {
+            return glfw.getProcAddress(command_name);
+        }
+        pub fn extensionSupported(extension_name: [:0]const u8) bool {
+            return glfw.extensionSupported(extension_name);
+        }
+    });
+
+    main_loop: while (true) {
+        glfw.pollEvents();
+        if (window.shouldClose()) break :main_loop;
+
+        gl.disable(gl.SCISSOR_TEST);
+        if (gl.extensionSupported(.NV_scissor_exclusive)) {
+            gl.disable(gl.SCISSOR_TEST_EXCLUSIVE_NV);
+            gl.clearBufferfv(gl.COLOR, 0, &[_]gl.Float{ 1, 0.8, 0.2, 1 });
+            gl.enable(gl.SCISSOR_TEST_EXCLUSIVE_NV);
+            gl.scissorExclusiveNV(72, 56, 8, 8);
+        }
+        gl.clearBufferfv(gl.COLOR, 0, &[_]gl.Float{ 1, 1, 1, 1 });
+        gl.enable(gl.SCISSOR_TEST);
+        const magic: u256 = 0x1FF8200446024F3A8071E321B0EDAC0A9BFA56AA4BFA26AA13F20802060401F8;
+        var i: gl.Int = 0;
+        while (i < 256) : (i += 1) {
+            if (magic >> @intCast(u8, i) & 1 != 0) {
+                gl.scissor(@rem(i, 16) * 8 + 8, @divTrunc(i, 16) * 8 + 8, 8, 8);
+                gl.clearBufferfv(gl.COLOR, 0, &[_]gl.Float{ 0, 0, 0, 1 });
             }
         }
 
         window.swapBuffers();
-        glfw.pollEvents();
     }
 }
 ```
+
+</details>
 
 ## Licence
 
