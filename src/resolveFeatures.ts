@@ -1,5 +1,5 @@
-import type { Registry } from "./fetchRegistry.js"
-import { compare } from "./utils.js"
+import type { Registry } from "./fetchRegistry.ts"
+import { compare } from "./utils.ts"
 
 // Type renaming algorithm (doesn't work for all identifiers):
 //

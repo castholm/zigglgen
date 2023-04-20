@@ -1,4 +1,4 @@
-import type { ResolvedFeatures } from "./resolveFeatures.js"
+import type { ResolvedFeatures } from "./resolveFeatures.ts"
 
 const NOTICE = [
   "// NOTICE\n",

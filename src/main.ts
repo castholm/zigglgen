@@ -1,6 +1,6 @@
-import { fetchRegistry } from "./fetchRegistry.js"
-import { generateCode } from "./generateCode.js"
-import { resolveFeatures } from "./resolveFeatures.js"
+import { fetchRegistry } from "./fetchRegistry.ts"
+import { generateCode } from "./generateCode.ts"
+import { resolveFeatures } from "./resolveFeatures.ts"
 
 const registry = await fetchRegistry(new URL("../deps/gl.xml", import.meta.url))
 

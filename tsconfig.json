@@ -12,6 +12,7 @@
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     // Modules
+    "allowImportingTsExtensions": true,
     "module": "esnext",
     "moduleResolution": "nodenext",
     // Emit
@@ -20,6 +21,7 @@
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
     "isolatedModules": true,
+    "verbatimModuleSyntax": true,
     // Language and Environment
     "lib": ["esnext", "dom", "dom.iterable"],
     "target": "esnext",

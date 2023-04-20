@@ -5507,7 +5507,8 @@ typedef unsigned int GLhandleARB;
         <enum value="0x8EA0" name="GL_TRP_IMG"/>
         <enum value="0x8EA1" name="GL_TRP_ERROR_CONTEXT_RESET_IMG"/>
         <enum value="0x8EA2" name="GL_TRP_UNSUPPORTED_CONTEXT_IMG"/>
-            <unused start="0x8EA3" end="0x8EAF" vendor="IMG"/>
+        <enum value="0x8EA3" name="GL_PVRIC_SIGNATURE_MISMATCH_IMG"/>
+            <unused start="0x8EA4" end="0x8EAF" vendor="IMG"/>
     </enums>
 
     <enums namespace="GL" start="0x8EB0" end="0x8EBF" vendor="OES" comment="For Affie Munshi 2007/07/20">
@@ -42982,6 +42983,11 @@ typedef unsigned int GLhandleARB;
                 <enum name="GL_TRP_UNSUPPORTED_CONTEXT_IMG"/>
             </require>
         </extension>
+        <extension name="GL_IMG_pvric_end_to_end_signature" supported="glsc2">
+            <require>
+                <enum name="GL_PVRIC_SIGNATURE_MISMATCH_IMG"/>
+            </require>
+        </extension>
         <extension name="GL_INGR_blend_func_separate" supported="gl">
             <require>
                 <command name="glBlendFuncSeparateINGR"/>
@@ -44174,12 +44180,6 @@ typedef unsigned int GLhandleARB;
                 <command name="glMultiTexCoord3hvNV"/>
                 <command name="glMultiTexCoord4hNV"/>
                 <command name="glMultiTexCoord4hvNV"/>
-                <command name="glFogCoordhNV"/>
-                <command name="glFogCoordhvNV"/>
-                <command name="glSecondaryColor3hNV"/>
-                <command name="glSecondaryColor3hvNV"/>
-                <command name="glVertexWeighthNV"/>
-                <command name="glVertexWeighthvNV"/>
                 <command name="glVertexAttrib1hNV"/>
                 <command name="glVertexAttrib1hvNV"/>
                 <command name="glVertexAttrib2hNV"/>
@@ -44192,6 +44192,18 @@ typedef unsigned int GLhandleARB;
                 <command name="glVertexAttribs2hvNV"/>
                 <command name="glVertexAttribs3hvNV"/>
                 <command name="glVertexAttribs4hvNV"/>
+            </require>
+            <require comment="Supported only if GL_EXT_fog_coord is supported">
+                <command name="glFogCoordhNV"/>
+                <command name="glFogCoordhvNV"/>
+            </require>
+            <require comment="Supported only if GL_EXT_secondary_color is supported">
+                <command name="glSecondaryColor3hNV"/>
+                <command name="glSecondaryColor3hvNV"/>
+            </require>
+            <require comment="Supported only if GL_EXT_vertex_weighting is supported">
+                <command name="glVertexWeighthNV"/>
+                <command name="glVertexWeighthvNV"/>
             </require>
         </extension>
         <extension name="GL_NV_image_formats" supported="gles2"/>

@@ -1,4 +1,4 @@
-import { compare } from "./utils.js"
+import { compare } from "./utils.ts"
 
 export type Registry = {
   readonly $root: Element
