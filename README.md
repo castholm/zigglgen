@@ -1,21 +1,21 @@
-# zigglgen 0.2
+# zigglgen
 
-Zig OpenGL binding generator
+Zig OpenGL binding generator that [runs in your browser](https://castholm.github.io/zigglgen/)
 
 ## Usage
 
-[zigglgen runs in your web browser and is available online](https://castholm.github.io/zigglgen). Simply select your
-API, version, profile and extensions and choose *Preview* or *Download* to generate a Zig binding.
+Simply visit [the generator web app hosted online](https://castholm.github.io/zigglgen/), select your API, version,
+profile and extensions and choose *Preview* or *Download* to generate a Zig source file containing your binding.
 
-Functions, constants, types and extensions are stripped off their `^(gl|GL_?)` prefixes and have their capitalization
-altered slightly but are otherwise identical to their original C/C++ definitions.
+Functions, constants, types and extensions are stripped off their prefixes and have their capitalization altered
+slightly but are otherwise identical to their original C/C++ definitions:
 
-| Original C/C++        | Generated Zig                |
-|-----------------------|------------------------------|
-| `glClearColor()`      | `clearColor()`               |
-| `GL_TRIANGLES`        | `TRIANGLES`                  |
-| `GLfloat`             | `Float`                      |
-| `GL_ARB_clip_control` | `Extension.ARB_clip_control` |
+| Original C/C++        | Generated Zig       |
+|-----------------------|---------------------|
+| `glClearColor()`      | `clearColor()`      |
+| `GL_TRIANGLES`        | `TRIANGLES`         |
+| `GLfloat`             | `Float`             |
+| `GL_ARB_clip_control` | `.ARB_clip_control` |
 
 Please note that zigglgen currently only officially supports the nightly 0.11.0-dev builds of Zig. Generated code is not
 guaranteed to work with earlier versions of the compiler.
@@ -39,6 +39,24 @@ const supported: bool = loader.extensionSupported(extension_name);
 _ = supported;
 ```
 
+In other words, you usually call `init()` like this:
+
+```zig
+const Loader = struct {
+    const AnyCommandFnPtr = *align(@alignOf(fn () callconv(.C) void)) const anyopaque;
+
+    pub fn getCommandFnPtr(command_name: [:0]const u8) ?AnyCommandFnPtr {
+        return some_library.getProcAddress(command_name);
+    }
+
+    pub fn extensionSupported(extension_name: [:0]const u8) bool {
+        return some_library.isExtensionSupported(extension_name);
+    }
+}
+
+gl.init(Loader);
+```
+
 No references to `loader` are retained by the binding after `init()` returns.
 
 ### Extensions
@@ -54,6 +72,8 @@ The below examples use a binding generated with *OpenGL 3.3 (Core Profile)* and 
 ### SDL2
 
 Using [zsdl](https://github.com/michal-z/zig-gamedev/tree/main/libs/zsdl):
+
+<details><summary>Click to expand/collapse</summary>
 
 ```zig
 const sdl = @import("zsdl");
@@ -80,7 +100,7 @@ pub fn main() !void {
 
     const gl_context = try sdl.gl.createContext(window);
     defer sdl.gl.deleteContext(gl_context);
-    try sdl.gl.makeCurrent(window, gl_context);
+
     try sdl.gl.setSwapInterval(1);
 
     gl.init(struct {
@@ -123,6 +143,8 @@ pub fn main() !void {
 }
 ```
 
+</details>
+
 ### GLFW
 
 Using [mach/glfw](https://github.com/hexops/mach-glfw):
@@ -146,6 +168,7 @@ pub fn main() !void {
     defer window.destroy();
 
     glfw.makeContextCurrent(window);
+
     glfw.swapInterval(1);
 
     gl.init(struct {
@@ -192,10 +215,10 @@ pub fn main() !void {
 
 Yes, but it's complicated.
 
-On paper, function pointers loaded under one OpenGL context are not guaranteed to be valid under another context. When
-you call `init()`, loaded command function pointers are copied to a global instance of the `Features` struct. All
-top-level functions forward their calls to this shared instance, which makes it unsafe to call top-level functions under
-a context different from the one that was current when `init()` was called.
+On paper, function pointers loaded when one OpenGL context was current are not guaranteed to be valid when a different
+context is current. When you call `init()`, loaded command function pointers are copied to a shared global instance of
+the `Features` struct. All top-level functions forward their calls to this shared instance, which makes it unsafe to
+call top-level functions when the current context is different from the one that was current when `init()` was called.
 
 In practice, most platforms and OpenGL implementations will return context-independent pointers that can be safely
 shared between multiple contexts, but you should not depend on this behavior unless you are absolutely certain that this
@@ -216,7 +239,8 @@ if (f.GL_ARB_clip_control) {
 }
 ```
 
-Do note that the `Features` struct is enormous, so storing instances of it on the stack is usually a bad idea.
+Do note that the `Features` struct is enormous, so storing instances of it on the stack will likely lead to a stack
+overflow.
 
 ### Why did calling a function belonging to a supported extension result in a null pointer dereference?
 
@@ -229,8 +253,8 @@ after loading is complete. The definitions that zigglgen derives its output from
 in a consistent and structured manner, so we can't generate code that validates the non-nullness of conditional command
 function pointers if their conditions are met (because we don't know what those conditions are).
 
-If your code uses OpenGL extensions it is your responsibility to read the extension specifications and understand under
-which conditions added features are supported.
+If your code uses OpenGL extensions it is your responsibility to read the extension specifications and learn under which
+conditions added features are supported.
 
 ### How do I run zigglgen locally?
 

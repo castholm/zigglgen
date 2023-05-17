@@ -1,7 +1,7 @@
 import type { ResolvedFeatures } from "./resolveFeatures.ts"
 
-const GENERATOR_NAME = "zigglgen 0.2"
-const GENERATOR_PROJECT_URL = "https://github.com/castholm/zigglgen"
+const GENERATOR_NAME = "zigglgen v0.2"
+const GENERATOR_PROJECT_URL = "https://github.com/castholm/zigglgen/"
 
 const NOTICE = [
   "// NOTICE\n",
@@ -122,14 +122,12 @@ export function generateCode(features: ResolvedFeatures, apiVersionProfile: stri
   sb.push("        inline for (std.meta.fields(Features)) |field_info| {\n")
   sb.push("            const feature_name = comptime nullTerminate(field_info.name);\n")
   sb.push("            switch (@typeInfo(field_info.type)) {\n")
-  if (hasExtensions) {
-    sb.push("                .Bool => @field(f, feature_name) = false,\n")
-  }
   sb.push("                .Pointer => |ptr_info| switch (@typeInfo(ptr_info.child)) {\n")
   sb.push("                    .Fn => f.loadCommand(loader, feature_name),\n")
   sb.push("                    else => comptime unreachable,\n")
   sb.push("                },\n")
   if (hasExtensions) {
+    sb.push("                .Bool => @field(f, feature_name) = false,\n")
     sb.push("                .Optional => |opt_info| switch (@typeInfo(opt_info.child)) {\n")
     sb.push("                    .Pointer => |ptr_info| switch (@typeInfo(ptr_info.child)) {\n")
     sb.push("                        .Fn => @field(f, feature_name) = null,\n")
