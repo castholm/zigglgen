@@ -5,7 +5,7 @@ Zig OpenGL binding generator that [runs in your browser](https://castholm.github
 ## Usage
 
 Simply visit [the generator web app hosted online](https://castholm.github.io/zigglgen/), select your API, version,
-profile and extensions and choose *Preview* or *Download* to generate a Zig source file containing your binding.
+profile and extensions and choose *Preview* or *Download* to generate your source file.
 
 Functions, constants, types and extensions are stripped off their prefixes and have their capitalization altered
 slightly but are otherwise identical to their original C/C++ definitions:
@@ -22,52 +22,77 @@ guaranteed to work with earlier versions of the compiler.
 
 ### Initialization
 
-Before the binding can be used, it must be initialized by calling `fn init(loader: anytype) void` while the calling
-thread has a current OpenGL context.
+Much like how OpenGL operates on a thread-local *current context*, generated top-level functions operate on a
+thread-local *current binding* in the form of an instance of the `Binding` struct.
+
+Before a binding can be used, it must first be initialized by calling `fn init(self: *Binding, loader: anytype) void`
+while the calling thread has a current OpenGL context. This will populate the binding with OpenGL command function
+pointers and supported extensions from the current context.
 
 `loader` is duck-typed and can be either a container or an instance, so long as it satisfies the following code:
 
 ```zig
 const command_name: [:0]const u8 = "glExample";
-const AnyCommandFnPtr = *align(@alignOf(fn () callconv(.C) void)) const anyopaque;
-const fn_ptr: ?AnyCommandFnPtr = loader.GetCommandFnPtr(command_name);
+const AnyCFnPtr = *align(@alignOf(fn () callconv(.C) void)) const anyopaque;
+const fn_ptr: ?AnyCFnPtr = loader.GetCommandFnPtr(command_name);
 _ = fn_ptr;
 
-// If the binding was generated with extensions:
+// If the source file was generated with extensions:
 const extension_name: [:0]const u8 = "GL_EXT_example";
 const supported: bool = loader.extensionSupported(extension_name);
 _ = supported;
 ```
 
-In other words, you usually call `init()` like this:
+Once initialized, you pass the binding to `fn makeBindingCurrent(binding: ?*const Binding) void` to make it current on
+the calling thread. The binding is only valid for as long as the OpenGL context that was current when `init()` was
+called is current; if you change the current context or move it to a different thread you must also change/move the
+current binding in the same manner.
+
+To illustrate, initialization generally looks something like this:
 
 ```zig
-const Loader = struct {
-    const AnyCommandFnPtr = *align(@alignOf(fn () callconv(.C) void)) const anyopaque;
+// Container-level global variable:
+var gl_binding: gl.Binding = undefined;
 
-    pub fn getCommandFnPtr(command_name: [:0]const u8) ?AnyCommandFnPtr {
+const GlBindingLoader = struct {
+    const AnyCFnPtr = *align(@alignOf(fn () callconv(.C) void)) const anyopaque;
+
+    pub fn getCommandFnPtr(command_name: [:0]const u8) ?AnyCFnPtr {
         return some_library.getProcAddress(command_name);
     }
 
     pub fn extensionSupported(extension_name: [:0]const u8) bool {
-        return some_library.isExtensionSupported(extension_name);
+        return some_library.extensionSupported(extension_name);
     }
-}
+};
 
-gl.init(Loader);
+pub fn main() void {
+    // ...
+
+    some_library.makeContextCurrent(gl_context);
+    defer some_library.makeContextCurrent(null);
+
+    gl_binding.init(GlBindingLoader);
+
+    gl.makeBindingCurrent(&gl_binding);
+    defer gl.makeBindingCurrent(null);
+
+    // ...
+}
 ```
 
-No references to `loader` are retained by the binding after `init()` returns.
+`Binding` is a very large struct, so you should avoid storing instances of it on the stack. Use global variables or
+allocate them on the heap instead.
 
 ### Extensions
 
-Extension-specific functions, constants and types are made available as top-level declarations like any other. If the
-binding was generated with extensions, you can call `fn extensionSupported(comptime extension: Extension) bool` to test
-whether an extension is supported by the current OpenGL context before attempting to use it.
+Extension-specific functions, constants and types are made available as top-level declarations just like regular ones.
+If the source file was generated with extensions, you can call `fn extensionSupported(comptime extension: Extension)
+bool` to test whether an extension is supported by the current binding before attempting to use it.
 
 ## Examples
 
-The below examples use a binding generated with *OpenGL 3.3 (Core Profile)* and *NV_scissor_exclusive* selected:
+The below examples assume a source file generated with *OpenGL 3.3 (Core Profile)* and *NV_scissor_exclusive* selected:
 
 ### SDL2
 
@@ -79,6 +104,21 @@ Using [zsdl](https://github.com/michal-z/zig-gamedev/tree/main/libs/zsdl):
 const sdl = @import("zsdl");
 const gl = @import("gl.zig");
 
+var gl_binding: gl.Binding = undefined;
+
+const GlBindingLoader = struct {
+    const c_fn_alignment = @alignOf(fn () callconv(.C) void);
+    const AnyCFnPtr = *align(c_fn_alignment) const anyopaque;
+
+    pub fn getCommandFnPtr(command_name: [:0]const u8) ?AnyCFnPtr {
+        return @alignCast(c_fn_alignment, sdl.gl.getProcAddress(command_name));
+    }
+
+    pub fn extensionSupported(extension_name: [:0]const u8) bool {
+        return sdl.gl.isExtensionSupported(extension_name);
+    }
+};
+
 pub fn main() !void {
     try sdl.init(.{ .video = true });
     defer sdl.quit();
@@ -86,8 +126,8 @@ pub fn main() !void {
     try sdl.gl.setAttribute(.context_profile_mask, @enumToInt(sdl.gl.Profile.core));
     try sdl.gl.setAttribute(.context_major_version, gl.info.api_version_major);
     try sdl.gl.setAttribute(.context_minor_version, gl.info.api_version_minor);
-    const context_flags = sdl.gl.ContextFlags{ .forward_compatible = true };
-    try sdl.gl.setAttribute(.context_flags, @bitCast(i32, context_flags));
+    const gl_context_flags = sdl.gl.ContextFlags{ .forward_compatible = true };
+    try sdl.gl.setAttribute(.context_flags, @bitCast(i32, gl_context_flags));
     const window = try sdl.Window.create(
         "OpenGL is a art",
         sdl.Window.pos_undefined,
@@ -101,18 +141,12 @@ pub fn main() !void {
     const gl_context = try sdl.gl.createContext(window);
     defer sdl.gl.deleteContext(gl_context);
 
-    try sdl.gl.setSwapInterval(1);
+    gl_binding.init(GlBindingLoader);
 
-    gl.init(struct {
-        const alignment = @alignOf(fn () callconv(.C) void);
-        const AnyCommandFnPtr = *align(alignment) const anyopaque;
-        pub fn getCommandFnPtr(command_name: [:0]const u8) ?AnyCommandFnPtr {
-            return @alignCast(alignment, sdl.gl.getProcAddress(command_name));
-        }
-        pub fn extensionSupported(extension_name: [:0]const u8) bool {
-            return sdl.gl.isExtensionSupported(extension_name);
-        }
-    });
+    gl.makeBindingCurrent(&gl_binding);
+    defer gl.makeBindingCurrent(null);
+
+    try sdl.gl.setSwapInterval(1);
 
     main_loop: while (true) {
         var event: sdl.Event = undefined;
@@ -155,6 +189,18 @@ Using [mach/glfw](https://github.com/hexops/mach-glfw):
 const glfw = @import("glfw");
 const gl = @import("gl.zig");
 
+var gl_binding: gl.Binding = undefined;
+
+const GlBindingLoader = struct {
+    pub fn getCommandFnPtr(command_name: [:0]const u8) ?glfw.GLProc {
+        return glfw.getProcAddress(command_name);
+    }
+
+    pub fn extensionSupported(extension_name: [:0]const u8) bool {
+        return glfw.extensionSupported(extension_name);
+    }
+};
+
 pub fn main() !void {
     if (!glfw.init(.{})) return error.GlfwInitFailed;
     defer glfw.terminate();
@@ -168,17 +214,14 @@ pub fn main() !void {
     defer window.destroy();
 
     glfw.makeContextCurrent(window);
+    defer glfw.makeContextCurrent(null);
+
+    gl_binding.init(GlBindingLoader);
+
+    gl.makeBindingCurrent(&gl_binding);
+    defer gl.makeBindingCurrent(null);
 
     glfw.swapInterval(1);
-
-    gl.init(struct {
-        pub fn getCommandFnPtr(command_name: [:0]const u8) ?glfw.GLProc {
-            return glfw.getProcAddress(command_name);
-        }
-        pub fn extensionSupported(extension_name: [:0]const u8) bool {
-            return glfw.extensionSupported(extension_name);
-        }
-    });
 
     main_loop: while (true) {
         glfw.pollEvents();
@@ -211,36 +254,15 @@ pub fn main() !void {
 
 ## FAQ
 
-### Do bindings generated by zigglgen support multiple OpenGL contexts?
+### Why is initialization so awkward? Why so much thread-local state?
 
-Yes, but it's complicated.
+Initialization and state management is awkward because OpenGL is awkward and we want zigglgen's output to be able to be
+used in portable multi-threaded, multi-context OpenGL programs.
 
 On paper, function pointers loaded when one OpenGL context was current are not guaranteed to be valid when a different
-context is current. When you call `init()`, loaded command function pointers are copied to a shared global instance of
-the `Features` struct. All top-level functions forward their calls to this shared instance, which makes it unsafe to
-call top-level functions when the current context is different from the one that was current when `init()` was called.
-
-In practice, most platforms and OpenGL implementations will return context-independent pointers that can be safely
-shared between multiple contexts, but you should not depend on this behavior unless you are absolutely certain that this
-will always be the case for all of your target platforms.
-
-To work with multiple contexts in a way that is guaranteed to be safe, you can initialize independent instances of the
-`Features` struct and call their function pointers directly:
-
-```zig
-const gl = @import("gl.zig");
-var f: gl.Features = undefined;
-
-// After an OpenGL context has been created:
-f.init(loader);
-f.glClearBufferfv(gl.COLOR, 0, &[_]gl.Float{ 1, 1, 1, 1 });
-if (f.GL_ARB_clip_control) {
-    f.glClipControl.?(gl.UPPER_LEFT, gl.ZERO_TO_ONE);
-}
-```
-
-Do note that the `Features` struct is enormous, so storing instances of it on the stack will likely lead to a stack
-overflow.
+context is current. In practice, most platforms and OpenGL implementations will return context-independent pointers that
+can be safely shared between multiple contexts, but we can't assume that this is always the case if we want to write
+portable code.
 
 ### Why did calling a function belonging to a supported extension result in a null pointer dereference?
 
