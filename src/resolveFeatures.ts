@@ -298,7 +298,17 @@ export function resolveFeatures(
     resolvedCommands.sort((a, b) => compare(a.name, b.name))
 
     // Rename parameters that shadow other declarations.
-    const declaredNames = new Set(["init", "extensionSupported", "state", ...resolvedCommands.map(x => x.name)])
+    const declaredNames = new Set([
+      "std",
+      "root",
+      "about",
+      "makeDispatchTableCurrent",
+      "getCurrentDispatchTable",
+      "extensionSupported",
+      "options",
+      "options_override",
+      ...resolvedCommands.map(x => x.name),
+    ])
     for (const command of resolvedCommands) {
       for (const param of command.params) {
         while (declaredNames.has(param.name)) {
