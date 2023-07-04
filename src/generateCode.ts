@@ -11,7 +11,7 @@ const NOTICE = [
   "// END OF NOTICE\n",
 ].join("")
 
-const GENERATOR_NAME = "zigglgen v0.4"
+const GENERATOR_NAME = "zigglgen v0.4.1"
 const GENERATOR_URL = "https://castholm.github.io/zigglgen/"
 
 export function generateCode(features: ResolvedFeatures, apiVersionProfile: string): string {
@@ -143,7 +143,7 @@ export function generateCode(features: ResolvedFeatures, apiVersionProfile: stri
   sb.push("            const prefixed_feature_name = comptime nullTerminate(field_info.name);\n")
   sb.push("            switch (@typeInfo(field_info.type)) {\n")
   sb.push("                .Pointer => |ptr_info| switch (@typeInfo(ptr_info.child)) {\n")
-  sb.push("                    .Fn => success &= @boolToInt(self.load(loader, prefixed_feature_name)),\n")
+  sb.push("                    .Fn => success &= @intFromBool(self.load(loader, prefixed_feature_name)),\n")
   sb.push("                    else => comptime unreachable,\n")
   sb.push("                },\n")
   if (hasExtensions) {
@@ -188,7 +188,7 @@ export function generateCode(features: ResolvedFeatures, apiVersionProfile: stri
   sb.push("        const AnyCFnPtr = *align(@alignOf(fn () callconv(.C) void)) const anyopaque;\n")
   sb.push("        const fn_ptr_opt: ?AnyCFnPtr = loader.getCommandFnPtr(prefixed_command_name);\n")
   sb.push("        if (fn_ptr_opt) |fn_ptr| {\n")
-  sb.push("            @field(self, prefixed_command_name) = @ptrCast(FieldType, fn_ptr);\n")
+  sb.push("            @field(self, prefixed_command_name) = @ptrCast(fn_ptr);\n")
   sb.push("            return true;\n")
   sb.push("        } else {\n")
   sb.push("            return @typeInfo(FieldType) == .Optional;\n")

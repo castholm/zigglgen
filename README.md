@@ -157,11 +157,10 @@ const gl = @import("gl.zig");
 var gl_dispatch_table: gl.DispatchTable = undefined;
 
 const GlDispatchTableLoader = struct {
-    const c_fn_alignment = @alignOf(fn () callconv(.C) void);
-    const AnyCFnPtr = *align(c_fn_alignment) const anyopaque;
+    const AnyCFnPtr = *align(@alignOf(fn () callconv(.C) void)) const anyopaque;
 
     pub fn getCommandFnPtr(prefixed_command_name: [:0]const u8) ?AnyCFnPtr {
-        return @alignCast(c_fn_alignment, sdl.gl.getProcAddress(prefixed_command_name));
+        return @alignCast(sdl.gl.getProcAddress(prefixed_command_name));
     }
 
     pub fn extensionSupported(prefixed_extension_name: [:0]const u8) bool {
@@ -173,10 +172,10 @@ pub fn main() !void {
     try sdl.init(.{ .video = true });
     defer sdl.quit();
 
-    try sdl.gl.setAttribute(.context_profile_mask, @enumToInt(sdl.gl.Profile.core));
+    try sdl.gl.setAttribute(.context_profile_mask, @intFromEnum(sdl.gl.Profile.core));
     try sdl.gl.setAttribute(.context_major_version, gl.about.api_version_major);
     try sdl.gl.setAttribute(.context_minor_version, gl.about.api_version_minor);
-    try sdl.gl.setAttribute(.context_flags, @bitCast(i32, sdl.gl.ContextFlags{ .forward_compatible = true }));
+    try sdl.gl.setAttribute(.context_flags, @bitCast(sdl.gl.ContextFlags{ .forward_compatible = true }));
     const window = try sdl.Window.create(
         "OpenGL is a art",
         sdl.Window.pos_undefined,
@@ -215,7 +214,7 @@ pub fn main() !void {
         const magic: u256 = 0x1FF8200446024F3A8071E321B0EDAC0A9BFA56AA4BFA26AA13F20802060401F8;
         var i: gl.Int = 0;
         while (i < 256) : (i += 1) {
-            if (magic >> @intCast(u8, i) & 1 != 0) {
+            if (magic >> @intCast(i) & 1 != 0) {
                 gl.scissor(@rem(i, 16) * 8 + 8, @divTrunc(i, 16) * 8 + 8, 8, 8);
                 gl.clearBufferfv(gl.COLOR, 0, &[_]gl.Float{ 0, 0, 0, 1 });
             }
@@ -288,7 +287,7 @@ pub fn main() !void {
         const magic: u256 = 0x1FF8200446024F3A8071E321B0EDAC0A9BFA56AA4BFA26AA13F20802060401F8;
         var i: gl.Int = 0;
         while (i < 256) : (i += 1) {
-            if (magic >> @intCast(u8, i) & 1 != 0) {
+            if (magic >> @intCast(i) & 1 != 0) {
                 gl.scissor(@rem(i, 16) * 8 + 8, @divTrunc(i, 16) * 8 + 8, 8, 8);
                 gl.clearBufferfv(gl.COLOR, 0, &[_]gl.Float{ 0, 0, 0, 1 });
             }
