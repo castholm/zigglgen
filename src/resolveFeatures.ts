@@ -1,19 +1,11 @@
 import type { Registry } from "./fetchRegistry.ts"
 import { compare } from "./utils.ts"
 
-// Type renaming algorithm (doesn't work for all identifiers):
-//
-//     typeKey.replace(
-//       /^GL([a-z]|[A-Z]+PROC|[A-Z](?:[A-Z](?=[A-Z]|$))*)/,
-//       (...x) => x[1][0].toUpperCase() + x[1].slice(1).toLowerCase(),
-//     )
-//
-
 const TYPES: ReadonlyMap<string, {
-  readonly key: string
-  readonly name: string
-  readonly type: string
-  readonly typeDependency: string | null
+  readonly nameOld: string
+  readonly nameNew: string
+  readonly typeOld: string
+  readonly typeNew: string
   readonly ordinal: number
 }> = new Map(([
   //["GLvoid", "Void", "anyopaque"], // Used in old C headers; not an actual OpenGL type.
@@ -47,18 +39,33 @@ const TYPES: ReadonlyMap<string, {
   ["GLclampd", "Clampd", "f64"],
   ["GLclampx", "Clampx", "i32"],
   ["GLsync", "Sync", "?*opaque {}"],
-  ["GLDEBUGPROC", "Debugproc", '?*const fn (source: Enum, @"type": Enum, id: Uint, severity: Enum, length: Sizei, message: [*:0]const Char, userParam: ?*const anyopaque) callconv(.C) void'],
-  ["GLDEBUGPROCARB", "DebugprocARB", '?*const fn (source: Enum, @"type": Enum, id: Uint, severity: Enum, length: Sizei, message: [*:0]const Char, userParam: ?*const anyopaque) callconv(.C) void'],
-  ["GLDEBUGPROCKHR", "DebugprocKHR", '?*const fn (source: Enum, @"type": Enum, id: Uint, severity: Enum, length: Sizei, message: [*:0]const Char, userParam: ?*const anyopaque) callconv(.C) void'],
-  ["GLDEBUGPROCAMD", "DebugprocAMD", "?*const fn (id: Uint, category: Enum, severity: Enum, length: Sizei, message: [*:0]const Char, userParam: ?*anyopaque) callconv(.C) void"],
+  ["GLDEBUGPROC", "DebugProc",
+    '?*const fn (source: GLenum, @"type": GLenum, id: GLuint, severity: GLenum, length: GLsizei, message: [*:0]const GLchar, userParam: ?*const anyopaque) callconv(.C) void',
+    '?*const fn (source: Enum, @"type": Enum, id: Uint, severity: Enum, length: Sizei, message: [*:0]const Char, userParam: ?*const anyopaque) callconv(.C) void',
+  ],
+  ["GLDEBUGPROCARB", "DebugProcARB",
+    '?*const fn (source: GLenum, @"type": GLenum, id: GLuint, severity: GLenum, length: GLsizei, message: [*:0]const GLchar, userParam: ?*const anyopaque) callconv(.C) void',
+    '?*const fn (source: Enum, @"type": Enum, id: Uint, severity: Enum, length: Sizei, message: [*:0]const Char, userParam: ?*const anyopaque) callconv(.C) void',
+  ],
+  ["GLDEBUGPROCKHR", "DebugProcKHR",
+    '?*const fn (source: GLenum, @"type": GLenum, id: GLuint, severity: GLenum, length: GLsizei, message: [*:0]const GLchar, userParam: ?*const anyopaque) callconv(.C) void',
+    '?*const fn (source: Enum, @"type": Enum, id: Uint, severity: Enum, length: Sizei, message: [*:0]const Char, userParam: ?*const anyopaque) callconv(.C) void',
+  ],
+  ["GLDEBUGPROCAMD", "DebugProcAMD",
+    "?*const fn (id: GLuint, category: GLenum, severity: GLenum, length: GLsizei, message: [*:0]const GLchar, userParam: ?*anyopaque) callconv(.C) void",
+    "?*const fn (id: Uint, category: Enum, severity: Enum, length: Sizei, message: [*:0]const Char, userParam: ?*anyopaque) callconv(.C) void",
+  ],
   ["struct _cl_context", "ClContextARB", "opaque {}"],
   ["struct _cl_event", "ClEventARB", "opaque {}"],
   ["GLeglClientBufferEXT", "EglClientBufferEXT", "?*anyopaque"],
   ["GLeglImageOES", "EglImageOES", "?*anyopaque"],
   ["GLhandleARB", "HandleARB", 'if (@import("builtin").os.tag == .macos) ?*anyopaque else c_uint'],
-  ["GLvdpauSurfaceNV", "VdpauSurfaceNV", "Intptr", "GLintptr"],
-  ["GLVULKANPROCNV", "VulkanprocNV", "?*const fn () callconv(.C) void"],
-] as const).map((x, i) => [x[0], { key: x[0], name: x[1], type: x[2], typeDependency: x[3] ?? null, ordinal: i }]))
+  ["GLvdpauSurfaceNV", "VdpauSurfaceNV",
+    "GLintptr",
+    "Intptr",
+  ],
+  ["GLVULKANPROCNV", "VulkanProcNV", "?*const fn () callconv(.C) void"],
+] as const).map((x, i) => [x[0], { nameOld: x[0].replace(" ", "_"), nameNew: x[1], typeOld: x[2], typeNew: x[3] ?? x[2], ordinal: i }]))
 
 const SPECIAL_NUMBERS: ReadonlyMap<string, {
   readonly ordinal: number
@@ -124,6 +131,7 @@ export function resolveFeatures(
   version: string,
   profile: string | null,
   extensions: string[],
+  preserveNames: boolean,
 ): ResolvedFeatures {
   const requiredTypes = new Set<string>()
   const requiredConstants = new Set<string>()
@@ -150,7 +158,7 @@ export function resolveFeatures(
   const $root = registry.$root
 
   { // Process feature elements
-    const $features = [...$root.querySelectorAll(`:scope > feature[api=${api}`)]
+    const $features = [...$root.querySelectorAll(`:scope > feature[api=${api}]`)]
       .map($ => [$, $.getAttribute("number")!] as const)
       .filter(x => x[1] <= version)
       .sort((a, b) => compare(a[1], b[1]))
@@ -230,7 +238,7 @@ export function resolveFeatures(
       }
       resolvedExtensions.push({
         key: extensionKey,
-        name: extensionKey.replace(/^GL_/, ""),
+        name: preserveNames ? extensionKey : extensionKey.replace(/^GL_/, ""),
         commands: [...optionalCommands].sort(compare),
       })
     }
@@ -252,18 +260,19 @@ export function resolveFeatures(
       }
 
       function parseType(expression: string): string {
+        const nameKey = preserveNames ? "nameOld" : "nameNew"
         const tokens = expression.match(/(struct\s+)?[^\s*]+|\*/g)!
         if (tokens[0] === "const") {
           [tokens[0], tokens[1]] = [tokens[1]!, tokens[0]]
         }
         if (!tokens.includes("*")) {
-          return tokens[0] === "void" ? "void" : TYPES.get(tokens[0])!.name
+          return tokens[0] === "void" ? "void" : TYPES.get(tokens[0])![nameKey]
         }
         let [type, pointer] = tokens[0] === "void"
           ? ["anyopaque", "?*"]
           : tokens[0].startsWith("struct _cl_")
-          ? [TYPES.get(tokens[0])!.name, "?*"]
-          : [TYPES.get(tokens[0])!.name, "[*c]"]
+          ? [TYPES.get(tokens[0])![nameKey], "?*"]
+          : [TYPES.get(tokens[0])![nameKey], "[*c]"]
         for (let i = 1; i < tokens.length - 1; i++) {
           switch (tokens[i]!) {
           case "const":
@@ -280,7 +289,7 @@ export function resolveFeatures(
 
       resolvedCommands.push({
         key,
-        name: key.replace(/^gl([A-Z](?:[A-Z](?=[A-Z]|$))*)/, (...x) => x[1].toLowerCase()),
+        name: preserveNames ? key : key.replace(/^gl([A-Z](?:[A-Z](?=[A-Z]|$))*)/, (...x) => x[1].toLowerCase()),
         params: [...$command.querySelectorAll(":scope > param")].map($ => {
           const typeDependency = $.querySelector(":scope > ptype")?.textContent
           if (typeDependency) {
@@ -305,8 +314,12 @@ export function resolveFeatures(
       "makeDispatchTableCurrent",
       "getCurrentDispatchTable",
       "extensionSupported",
-      "options",
-      "options_override",
+      "Extension",
+      "DispatchTable",
+      "Proc",
+      "issueCommand",
+      "issueCommandDefault",
+      "ReturnTypeOfCommand",
       ...resolvedCommands.map(x => x.name),
     ])
     for (const command of resolvedCommands) {
@@ -348,7 +361,7 @@ export function resolveFeatures(
         const numericValue = BigInt($enum.getAttribute("value")!)
         resolvedConstants.push({
           key,
-          name: key.replace(/^GL_/, ""),
+          name: preserveNames ? key : key.replace(/^GL_/, ""),
           value: numericValue.toString(16).toUpperCase().replace(/[0-9A-F]+$/, x => "0x" + x),
           numericValue: numericValue,
           kind,
@@ -357,7 +370,7 @@ export function resolveFeatures(
         })
       }
     }
-      resolvedConstants.sort((a, b) => {
+    resolvedConstants.sort((a, b) => {
       if (a.kind === "special-number") {
         if (b.kind === "special-number") {
           return a.specialNumberOrdinal - b.specialNumberOrdinal
@@ -395,10 +408,15 @@ export function resolveFeatures(
       if (!type) {
         continue
       }
-      if (type.typeDependency) {
-        requiredTypes.add(type.typeDependency)
+      if (key === "GLvdpauSurfaceNV") { // This is the only type that introduces a dependency on a different type.
+        requiredTypes.add("GLintptr")
       }
-      resolvedTypes.push(type)
+      resolvedTypes.push({
+        key: type.nameOld,
+        name: preserveNames ? type.nameOld : type.nameNew,
+        type: preserveNames ? type.typeOld : type.typeNew,
+        ordinal: type.ordinal,
+      })
     }
     resolvedTypes.sort((a, b) => a.ordinal - b.ordinal)
   }

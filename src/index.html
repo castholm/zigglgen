@@ -3,17 +3,17 @@
 <head>
   <meta charset=utf-8>
   <link rel=icon type=image/svg+xml href=favicon.svg>
-  <title>zigglgen v0.4.1</title>
+  <title>zigglgen v0.5</title>
 <script type=module src=main.ts></script><link rel=stylesheet href=style.css></head>
 
 <main>
 
 <hgroup>
-  <h1>zigglgen v0.4.1</h1>
+  <h1>zigglgen v0.5</h1>
   <p>Zig OpenGL binding generator
 </hgroup>
 
-<p>See the <a href=https://github.com/castholm/zigglgen/ >GitHub repository</a> for more information.
+<p>See the <a href=https://github.com/castholm/zigglgen/ >GitHub repository</a> for documentation.
 
 <hr>
 
@@ -41,7 +41,7 @@
         <option value=gl,3.3,compatibility>OpenGL 3.3 (Compatibility Profile)</option>
         <option value=gl,4.0,core>OpenGL 4.0 (Core Profile)</option>
         <option value=gl,4.0,compatibility>OpenGL 4.0 (Compatibility Profile)</option>
-        <option value=gl,4.1,core selected>OpenGL 4.1 (Core Profile)</option>
+        <option value=gl,4.1,core>OpenGL 4.1 (Core Profile)</option>
         <option value=gl,4.1,compatibility>OpenGL 4.1 (Compatibility Profile)</option>
         <option value=gl,4.2,core>OpenGL 4.2 (Core Profile)</option>
         <option value=gl,4.2,compatibility>OpenGL 4.2 (Compatibility Profile)</option>
@@ -51,7 +51,7 @@
         <option value=gl,4.4,compatibility>OpenGL 4.4 (Compatibility Profile)</option>
         <option value=gl,4.5,core>OpenGL 4.5 (Core Profile)</option>
         <option value=gl,4.5,compatibility>OpenGL 4.5 (Compatibility Profile)</option>
-        <option value=gl,4.6,core>OpenGL 4.6 (Core Profile)</option>
+        <option value=gl,4.6,core selected>OpenGL 4.6 (Core Profile)</option>
         <option value=gl,4.6,compatibility>OpenGL 4.6 (Compatibility Profile)</option>
       </optgroup>
       <optgroup label="OpenGL ES">
@@ -70,7 +70,10 @@
   <label>Extensions (multi-select)
     <select multiple name=extension size=10></select>
   </label>
-  <div class=buttons>
+  <div>
+    <label><input type=checkbox name=preserve_names> Preserve original C naming convention</label>
+  </div>
+  <div>
     <input type=submit value=Preview>
     <input type=submit value=Download>
   </div>

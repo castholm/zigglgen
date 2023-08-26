@@ -8,6 +8,7 @@ const $loading = document.getElementById("loading")!
 const $form = document.getElementById("form") as HTMLFormElement
 const $apiVersionProfile = $form.querySelector("[name=api_version_profile]")! as HTMLSelectElement
 const $extensions = $form.querySelector("[name=extension]")! as HTMLSelectElement
+const $preserveNames = $form.querySelector("[name=preserve_names]") as HTMLInputElement
 const $preview = document.getElementById("preview")!
 const $previewOutlet = $preview.querySelector("code")!
 
@@ -36,8 +37,14 @@ $form.addEventListener("submit", e => {
   e.preventDefault()
   const [api, version, profile] = $apiVersionProfile.value.split(",")
   const extensions = [...$extensions.selectedOptions].map($ => $.value)
-  const features = resolveFeatures(registry, api!, version!, profile ?? null, extensions)
-  const code = generateCode(features, $apiVersionProfile.selectedOptions.item(0)!.textContent!)
+  const preserveNames = $preserveNames.checked
+  const features = resolveFeatures(registry, api!, version!, profile ?? null, extensions, preserveNames)
+  const code = generateCode(
+    features,
+    $apiVersionProfile.selectedOptions.item(0)!.textContent!,
+    version!,
+    preserveNames,
+  )
   switch ((e.submitter as HTMLInputElement).value) {
   case "Preview":
     $preview.hidden = false
