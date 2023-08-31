@@ -1,4 +1,8 @@
 dst/
 node_modules/
+zig-cache/
+zig-out/
 
 CODE_OF_CONDUCT.md
+
+test/gl*.zig
