@@ -14,7 +14,7 @@
     // Modules
     "allowImportingTsExtensions": true,
     "module": "esnext",
-    "moduleResolution": "nodenext",
+    "moduleResolution": "bundler",
     // Emit
     "noEmit": true,
     // Interop Constraints
