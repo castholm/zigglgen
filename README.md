@@ -77,7 +77,8 @@ Extension-specific functions, constants and types are made available as top-leve
 If the binding was generated with extensions, you can call `fn extensionSupported(comptime extension: Extension) bool`
 to test whether an extension is supported before attempting to use it.
 
-The status for all extensions is loaded in advance when you `init` your dispatch table, so calls to `extensionSupported` are extremely cheap and compile down to simply testing the value of a boolean field.
+The status for all extensions is loaded in advance when you `init` your dispatch table, so calls to `extensionSupported`
+are extremely cheap and compile down to simply testing the value of a boolean field.
 
 ### Intercepting Commands
 
@@ -86,7 +87,7 @@ ReturnTypeOfCommand(prefixed_name)` to issue OpenGL commands. The implementation
 which can be useful for things like logging, modifying arguments or automatically checking for OpenGL errors.
 
 To override `issueCommand`, simply publicly declare a function named `gl_issueCommand` with a compatible signature in
-the root source file. From within the overriding function, you can use `fn defaultIssueCommand(comptime prefixed_name:
+the root source file. From within this overriding function, you can use `fn defaultIssueCommand(comptime prefixed_name:
 [:0]const u8, args: anytype) ReturnTypeOfCommand(prefixed_name)` to issue commands per the default behavior.
 
 ```zig
