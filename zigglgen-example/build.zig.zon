@@ -7,7 +7,8 @@
             .hash = "1220fda87b59df6353864651cdd3943f1159d8d517a45cd67bed493fe6c0a0c78c17",
         },
         .zigglgen = .{
-            .path = "../zigglgen",
+            .url = "https://github.com/castholm/zigglgen/releases/download/v0.1.0/zigglgen.tar.gz",
+            .hash = "122000c96b42752782a7628e8bd6d5d68f77ec6de0900a574aa4f000809f350d70ca",
         },
     },
     .paths = .{
