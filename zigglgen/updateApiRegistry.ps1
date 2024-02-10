@@ -337,7 +337,7 @@ function glSortKey ([string] $str) {
         | ForEach-Object {
             (
                 $_ -csplit '(?<=[a-z])(?=[A-Z0-9])|(?<=[A-Z0-9])(?=[A-Z][a-z])'
-                | ForEach-Object { ($_.GetEnumerator() | ForEach-Object { '{0:000}' -f [ushort]$_ }) -join '' }
+                | ForEach-Object { ($_.GetEnumerator() | ForEach-Object { '{0:000}' -f ([ushort]$_ + 100) }) -join '' }
             ) -join '0'
         }
     ) -join '00'

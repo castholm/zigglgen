@@ -18,13 +18,12 @@ zig fetch https://github.com/castholm/zigglgen/releases/download/v0.1.0/zigglgen
 
 ```zig
 const std = @import("std");
-const zigglgen = @import("zigglgen");
 
 pub fn build(b: *std.Build) void {
     const exe = b.addExecutable(...);
 
     // Choose the OpenGL API, version, profile and extensions you want to generate bindings for.
-    const gl_bindings = zigglgen.generateBindingsModule(b, .{
+    const gl_bindings = @import("zigglgen").generateBindingsModule(b, .{
         .api = .gl,
         .version = .@"4.1",
         .profile = .core,
@@ -74,6 +73,9 @@ See [`zigglgen-example/`](zigglgen-example/) for a complete example project that
 [mach-glfw](https://machengine.org/pkg/mach-glfw/) as the windowing system.
 
 ## API
+
+(If you're curious what a generated set of bindings looks like, take a look at
+[`zigglgen-example/gles3.zig`](zigglgen-example/gles3.zig).)
 
 ### OpenGL symbols
 
@@ -174,7 +176,7 @@ Registry](https://github.com/KhronosGroup/OpenGL-Registry/tree/main/xml) are sup
 - OpenGL SC 2.0
 
 The [`zigglgen/updateApiRegistry.ps1`](zigglgen/updateApiRegistry.ps1) PowerShell script is used to fetch the API
-registry and convert it to a set of Zig source files that are comitted to revision control and used by the generator.
+registry and convert it to a set of Zig source files that are committed to revision control and used by the generator.
 
 ### Why is a thread-local procedure table required?
 
@@ -193,8 +195,8 @@ The short answer is that it's simply not possible to represent groups of OpenGL 
 satisfying manner:
 
 - The API registry currently specifies some of these groups, but far from all of them, and the groups are not guaranteed
-  to be complete. Groups can be extended by extensions, so Zig enums structs would need to be defined as non-exhaustive,
-  and using constants not specified as part of a group would require casting.
+  to be complete. Groups can be extended by extensions, so Zig enums would need to be defined as non-exhaustive, and
+  using constants not specified as part of a group would require casting.
 - Some commands like *GetIntegerv* that can return constants will return them as plain integers. Comparing the returned
   values against Zig enum fields would require casting.
 - Some constants in the same group are aliases for the same value, which makes them impossible to represent as
