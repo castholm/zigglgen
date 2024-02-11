@@ -69,18 +69,18 @@ pub fn main() !void {
  }
 ```
 
-See [`zigglgen-example/`](zigglgen-example/) for a complete example project that uses
-[mach-glfw](https://machengine.org/pkg/mach-glfw/) as the windowing system.
+See [`zigglgen-example/`](zigglgen-example/) for a complete example project that creates a window using
+[mach-glfw](https://machengine.org/pkg/mach-glfw/) and draws a triangle to it.
 
 ## API
 
-(If you're curious what a generated set of bindings looks like, take a look at
-[`zigglgen-example/gles3.zig`](zigglgen-example/gles3.zig).)
+If you're curious what a generated set of bindings looks like, take a look at
+[`zigglgen-example/gles3.zig`](zigglgen-example/gles3.zig).
 
 ### OpenGL symbols
 
 zigglgen generates declarations for OpenGL functions, constants, types and extensions using the original names as
-defined in the various OpenGL specifications (as opposed to the prefixed names used in C):
+defined in the various OpenGL specifications (as opposed to the prefixed names used in C).
 
 |           | C                     | Zig                |
 |-----------|:----------------------|:-------------------|

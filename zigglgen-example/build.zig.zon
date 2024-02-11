@@ -12,8 +12,11 @@
         },
     },
     .paths = .{
+        "README.md",
         "build.zig",
         "build.zig.zon",
+        "gles3.zig",
         "main.zig",
+        "screenshot.png",
     },
 }

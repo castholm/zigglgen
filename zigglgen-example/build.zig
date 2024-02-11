@@ -4,13 +4,20 @@ pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
 
+    // This example gives you the option between OpenGL 4.1 bindings generated at build time or
+    // vendored OpenGL ES 3.0 bindings generated in advance. The default is OpenGL 4.1.
+    const use_gles = b.option(
+        bool,
+        "gles",
+        "Target GL ES 3.0 instead of GL 4.1",
+    ) orelse false;
+
     const exe = b.addExecutable(.{
         .name = "zigglgen-example",
         .root_source_file = .{ .path = "main.zig" },
         .target = target,
         .optimize = optimize,
     });
-    exe.subsystem = .Windows;
 
     const mach_glfw_dep = b.dependency("mach-glfw", .{
         .target = target,
@@ -18,13 +25,20 @@ pub fn build(b: *std.Build) void {
     });
     exe.root_module.addImport("glfw", mach_glfw_dep.module("mach-glfw"));
 
-    const gl_bindings = @import("zigglgen").generateBindingsModule(b, .{
-        .api = .gl,
-        .version = .@"4.1",
-        .profile = .core,
-        .extensions = &.{ .ARB_clip_control, .NV_scissor_exclusive },
-    });
-    exe.root_module.addImport("gl", gl_bindings);
+    if (use_gles) {
+        // Use the vendored OpenGL ES 3.0 bindings.
+        exe.root_module.addAnonymousImport("gl", .{
+            .root_source_file = .{ .path = "gles3.zig" },
+        });
+    } else {
+        // Generate OpenGL 4.1 bindings at build time.
+        exe.root_module.addImport("gl", @import("zigglgen").generateBindingsModule(b, .{
+            .api = .gl,
+            .version = .@"4.1",
+            .profile = .core,
+            .extensions = &.{ .ARB_clip_control, .NV_scissor_exclusive },
+        }));
+    }
 
     b.installArtifact(exe);
 
@@ -34,14 +48,14 @@ pub fn build(b: *std.Build) void {
     const run_step = b.step("run", "Run the app");
     run_step.dependOn(&run_exe.step);
 
-    // If you prefer you can also generate bindings in advance and commit them to revision control.
-    const write_gles = b.addWriteFiles();
-    write_gles.addCopyFileToSource(@import("zigglgen").generateBindingsSourceFile(b, .{
+    // Set up a maintenance task step for updating the OpenGL ES 3.0 bindings.
+    const copy_gles = b.addWriteFiles();
+    copy_gles.addCopyFileToSource(@import("zigglgen").generateBindingsSourceFile(b, .{
         .api = .gles,
         .version = .@"3.0",
         .extensions = &.{ .EXT_clip_control, .NV_scissor_exclusive },
     }), "gles3.zig");
 
-    const update_gles = b.step("update-gles3", "Update 'gles3.zig'");
-    update_gles.dependOn(&write_gles.step);
+    const update_gles = b.step("update-gles-bindings", "Update 'gles3.zig'");
+    update_gles.dependOn(&copy_gles.step);
 }
