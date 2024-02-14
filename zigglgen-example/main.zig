@@ -43,7 +43,7 @@ pub fn main() !void {
         ),
         else => comptime unreachable,
     };
-    const vertex_shader_source = shader_source_preamble ++
+    const vertex_shader_source =
         \\in vec4 a_Position;
         \\in vec4 a_Color;
         \\out vec4 v_Color;
@@ -54,7 +54,7 @@ pub fn main() !void {
         \\}
         \\
     ;
-    const fragment_shader_source = shader_source_preamble ++
+    const fragment_shader_source =
         \\in vec4 v_Color;
         \\out vec4 f_Color;
         \\
@@ -64,7 +64,7 @@ pub fn main() !void {
         \\
     ;
 
-    // For the sake of being concise, this example doesn't check for shader compilation/linking
+    // For the sake of conciseness, this example doesn't check for shader compilation/linking
     // errors. A more robust program would use 'GetShaderiv'/'GetProgramiv' to check for errors.
     const program = create_program: {
         const vertex_shader = gl.CreateShader(gl.VERTEX_SHADER);
@@ -72,9 +72,9 @@ pub fn main() !void {
 
         gl.ShaderSource(
             vertex_shader,
-            1,
-            @ptrCast(&vertex_shader_source),
-            &@as(c_int, @intCast(vertex_shader_source.len)),
+            2,
+            &[2][*]const u8{ shader_source_preamble, vertex_shader_source },
+            &[2]c_int{ @intCast(shader_source_preamble.len), @intCast(vertex_shader_source.len) },
         );
         gl.CompileShader(vertex_shader);
 
@@ -83,13 +83,14 @@ pub fn main() !void {
 
         gl.ShaderSource(
             fragment_shader,
-            1,
-            @ptrCast(&fragment_shader_source),
-            &@as(c_int, @intCast(fragment_shader_source.len)),
+            2,
+            &[2][*]const u8{ shader_source_preamble, fragment_shader_source },
+            &[2]c_int{ @intCast(shader_source_preamble.len), @intCast(fragment_shader_source.len) },
         );
         gl.CompileShader(fragment_shader);
 
         const program = gl.CreateProgram();
+
         gl.AttachShader(program, vertex_shader);
         gl.AttachShader(program, fragment_shader);
         gl.LinkProgram(program);
@@ -157,12 +158,12 @@ pub fn main() !void {
         gl.Viewport(0, 0, @intCast(fb_size.width), @intCast(fb_size.height));
 
         // Clear the window.
-        gl.ClearBufferfv(gl.COLOR, 0, &@as([4]f32, .{ 1, 1, 1, 1 }));
+        gl.ClearBufferfv(gl.COLOR, 0, &[4]f32{ 1, 1, 1, 1 });
 
         // Draw the vertices.
         gl.DrawArrays(gl.TRIANGLES, 0, vertices.len);
 
-        // Perform some magic that prints a nice little message in the center :)
+        // Perform some wizardry that prints a nice little message in the center :)
         gl.Enable(gl.SCISSOR_TEST);
         const magic: u154 = 0x3bb924a43ddc000170220543b8006ef4c68ad77;
         const left = @divTrunc(@as(gl.int, @intCast(fb_size.width)) - 11 * 8, 2);
@@ -171,7 +172,7 @@ pub fn main() !void {
         while (i < 154) : (i += 1) {
             if (magic >> @intCast(i) & 1 != 0) {
                 gl.Scissor(left + @rem(i, 11) * 8, bottom + @divTrunc(i, 11) * 8, 8, 8);
-                gl.ClearBufferfv(gl.COLOR, 0, &@as([4]f32, .{ 0, 0, 0, 1 }));
+                gl.ClearBufferfv(gl.COLOR, 0, &[4]f32{ 0, 0, 0, 1 });
             }
         }
         gl.Disable(gl.SCISSOR_TEST);

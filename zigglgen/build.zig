@@ -42,7 +42,9 @@ pub fn generateBindingsSourceFile(b: *std.Build, options: GeneratorOptions) std.
         if (options.profile) |profile| @tagName(profile) else "",
     }));
     for (options.extensions) |extension| run_generator.addArg(@tagName(extension));
-    return run_generator.captureStdOut();
+    const output = run_generator.captureStdOut();
+    run_generator.captured_stdout.?.basename = "gl.zig";
+    return output;
 }
 
 fn thisDependency(b: *std.Build, args: anytype) *std.Build.Dependency {
@@ -57,6 +59,5 @@ fn thisDependency(b: *std.Build, args: anytype) *std.Build.Dependency {
         } else break :find_dep;
         return b.dependency(dep_name, args);
     }
-    std.debug.print("zigglgen is not a dependency in '{s}'.", .{b.pathFromRoot("build.zig.zon")});
-    std.process.exit(1);
+    std.debug.panic("zigglgen is not a dependency in '{s}'", .{b.pathFromRoot("build.zig.zon")});
 }

@@ -341,7 +341,7 @@ fn renderCode(
         \\//!
         \\//! pub fn main() !void {{
         \\//!     // Create an OpenGL context using a windowing system of your choice.
-        \\//!     var context = windowing.createContext(...);
+        \\//!     const context = windowing.createContext(...);
         \\//!     defer context.destroy();
         \\//!
         \\//!     // Make the OpenGL context current on the calling thread.
@@ -356,7 +356,7 @@ fn renderCode(
         \\//!     defer gl.makeProcTableCurrent(null);
         \\//!
         \\//!     // Issue OpenGL commands to your heart's content!
-        \\//!     const alpha: gl.{[real_type]s} = 1;
+        \\//!     const alpha: gl.{[clear_color_type]s} = 1;
         \\//!     gl.{[clear_color_fn]s}(1, 1, 1, alpha);
         \\//!     gl.Clear(gl.COLOR_BUFFER_BIT);
         \\//! }}
@@ -402,7 +402,7 @@ fn renderCode(
             .common => ".common",
             .common_lite => ".common_lite",
         } else "null",
-        .real_type = if (profile == .common_lite) "fixed" else "float",
+        .clear_color_type = if (profile == .common_lite) "fixed" else "float",
         .clear_color_fn = if (profile == .common_lite) "ClearColorx" else "ClearColor",
     });
     try writer.writeAll(
@@ -536,28 +536,29 @@ fn renderCode(
         \\    /// A procedure table must be successfully initialized before passing it to
         \\    /// `makeProcTableCurrent` or accessing any of its fields.
         \\    ///
-        \\    /// `locator` is duck-typed. Given the prefixed name of an OpenGL command (e.g. `"glClear"`), it
+        \\    /// `loader` is duck-typed. Given the prefixed name of an OpenGL command (e.g. `"glClear"`), it
         \\    /// should return a pointer to the corresponding function. It should be able to be used in one
         \\    /// of the following two ways:
         \\    ///
-        \\    /// - `@as(?PROC, locator(@as([*:0]const u8, prefixed_name)))`
-        \\    /// - `@as(?PROC, locator.getProcAddress(@as([*:0]const u8, prefixed_name)))`
+        \\    /// - `@as(?PROC, loader(@as([*:0]const u8, prefixed_name)))`
+        \\    /// - `@as(?PROC, loader.getProcAddress(@as([*:0]const u8, prefixed_name)))`
         \\    ///
         \\    /// If your windowing system has a "get procedure address" function, it is usually enough to
-        \\    /// simply pass that function as the `locator` argument.
+        \\    /// simply pass that function as the `loader` argument.
         \\    ///
-        \\    /// No references to `locator` are retained after this function returns.
+        \\    /// No references to `loader` are retained after this function returns.
         \\    ///
         \\    /// There is no corresponding `deinit` function.
-        \\    pub fn init(procs: *ProcTable, locator: anytype) bool {
+        \\    pub fn init(procs: *ProcTable, loader: anytype) bool {
         \\        @setEvalBranchQuota(1_000_000);
         \\        var success: u1 = 1;
         \\        inline for (@typeInfo(ProcTable).Struct.fields) |field_info| {
         \\            switch (@typeInfo(field_info.type)) {
         \\                .Pointer => |ptr_info| switch (@typeInfo(ptr_info.child)) {
         \\                    .Fn => {
-        // TODO 2024.3.0-mach: remove '++ ""'
-        \\                        success &= @intFromBool(procs.initCommand(locator, field_info.name ++ ""));
+        // TODO 2024.3.0-mach
+        //\\                        success &= @intFromBool(procs.initCommand(loader, field_info.name));
+        \\                        success &= @intFromBool(procs.initCommand(loader, field_info.name ++ ""));
         \\                    },
         \\                    else => comptime unreachable,
         \\                },
@@ -601,7 +602,7 @@ fn renderCode(
                 var extension_command_it = extension.value.commands.iterator();
                 while (extension_command_it.next()) |extension_command| {
                     try writer.print(
-                        \\            _ = procs.initCommand(locator, "{s}");
+                        \\            _ = procs.initCommand(loader, "{s}");
                         \\
                     , .{@tagName(extension_command)});
                 }
@@ -629,8 +630,8 @@ fn renderCode(
     try writer.writeAll(
         \\    }
         \\
-        \\    fn initCommand(procs: *ProcTable, locator: anytype, comptime name: [:0]const u8) bool {
-        \\        if (getProcAddress(locator, "gl" ++ name)) |proc| {
+        \\    fn initCommand(procs: *ProcTable, loader: anytype, comptime name: [:0]const u8) bool {
+        \\        if (getProcAddress(loader, "gl" ++ name)) |proc| {
         \\            @field(procs, name) = @ptrCast(proc);
         \\            return true;
         \\        } else {
@@ -638,15 +639,15 @@ fn renderCode(
         \\        }
         \\    }
         \\
-        \\    fn getProcAddress(locator: anytype, prefixed_name: [:0]const u8) ?PROC {
-        \\        const locator_info = @typeInfo(@TypeOf(locator));
-        \\        const locator_is_fn =
-        \\            locator_info == .Fn or
-        \\            locator_info == .Pointer and @typeInfo(locator_info.Pointer.child) == .Fn;
-        \\        if (locator_is_fn) {
-        \\            return @as(?PROC, locator(@as([*:0]const u8, prefixed_name)));
+        \\    fn getProcAddress(loader: anytype, prefixed_name: [:0]const u8) ?PROC {
+        \\        const loader_info = @typeInfo(@TypeOf(loader));
+        \\        const loader_is_fn =
+        \\            loader_info == .Fn or
+        \\            loader_info == .Pointer and @typeInfo(loader_info.Pointer.child) == .Fn;
+        \\        if (loader_is_fn) {
+        \\            return @as(?PROC, loader(@as([*:0]const u8, prefixed_name)));
         \\        } else {
-        \\            return @as(?PROC, locator.getProcAddress(@as([*:0]const u8, prefixed_name)));
+        \\            return @as(?PROC, loader.getProcAddress(@as([*:0]const u8, prefixed_name)));
         \\        }
         \\    }
         \\
@@ -662,22 +663,23 @@ fn renderCode(
             // Starting with GL 3.2, querying extensions via 'GetString' is no longer supported
             // under the Core profile.
             try writer.writeAll(
-                \\        var count: int = 0;
-                // TODO 2024.3.0-mach: replace with '(&count)[0..1]'
+                \\        var count: c_int = 0;
+                // TODO 2024.3.0-mach
+                //\\        procs.GetIntegerv(NUM_EXTENSIONS, (&count)[0..1]);
                 \\        procs.GetIntegerv(NUM_EXTENSIONS, @ptrCast(&count));
                 \\        if (count < 0) return false;
-                \\        var i: uint = 0;
-                \\        while (i < @as(uint, @intCast(count))) : (i += 1) {
+                \\        var i: c_uint = 0;
+                \\        while (i < @as(c_uint, @intCast(count))) : (i += 1) {
                 \\            const prefixed_name = procs.GetStringi(EXTENSIONS, i) orelse return false;
-                \\            if (std.mem.orderZ(ubyte, prefixed_name, "GL_" ++ name) == .eq) {
+                \\            if (std.mem.orderZ(u8, prefixed_name, "GL_" ++ name) == .eq) {
                 \\
             );
         } else {
             try writer.writeAll(
                 \\        const prefixed_names = procs.GetString(EXTENSIONS) orelse return false;
-                \\        var it = std.mem.tokenizeScalar(ubyte, std.mem.span(prefixed_names), ' ');
+                \\        var it = std.mem.tokenizeScalar(u8, std.mem.span(prefixed_names), ' ');
                 \\        while (it.next()) |prefixed_name| {
-                \\            if (std.mem.eql(ubyte, prefixed_name, "GL_" ++ name)) {
+                \\            if (std.mem.eql(u8, prefixed_name, "GL_" ++ name)) {
                 \\
             );
         }
@@ -822,10 +824,46 @@ fn paramOverride(command: registry.Command.Name, param_index: usize) ?struct {
     type_expr: []const u8,
 } {
     return switch (command) {
+        .BufferData,
+        .BufferDataARB,
+        => switch (param_index) {
+            2 => .{ .name = "data", .type_expr = "?*const anyopaque" },
+            else => null,
+        },
         .BufferStorageExternalEXT,
         .NamedBufferStorageExternalEXT,
         => switch (param_index) {
             3 => .{ .name = "clientBuffer", .type_expr = "eglClientBufferEXT" },
+            else => null,
+        },
+        inline .ClearBufferfv,
+        .ClearBufferiv,
+        .ClearBufferuiv,
+        => |tag| switch (param_index) {
+            2 => .{
+                .name = "values",
+                .type_expr = "[*]const " ++ switch (tag) {
+                    .ClearBufferfv => "float",
+                    .ClearBufferiv => "int",
+                    .ClearBufferuiv => "uint",
+                    else => comptime unreachable,
+                },
+            },
+            else => null,
+        },
+        inline .ClearNamedFramebufferfv,
+        .ClearNamedFramebufferiv,
+        .ClearNamedFramebufferuiv,
+        => |tag| switch (param_index) {
+            3 => .{
+                .name = "values",
+                .type_expr = "[*]const " ++ switch (tag) {
+                    .ClearNamedFramebufferfv => "float",
+                    .ClearNamedFramebufferiv => "int",
+                    .ClearNamedFramebufferuiv => "uint",
+                    else => comptime unreachable,
+                },
+            },
             else => null,
         },
         .ClientWaitSync,
@@ -843,20 +881,17 @@ fn paramOverride(command: registry.Command.Name, param_index: usize) ?struct {
             1 => .{ .name = "event", .type_expr = "cl_event" },
             else => null,
         },
-        .DebugMessageCallback => switch (param_index) {
-            0 => .{ .name = "callback", .type_expr = "?DEBUGPROC" },
-            else => null,
-        },
-        .DebugMessageCallbackAMD => switch (param_index) {
-            0 => .{ .name = "callback", .type_expr = "?DEBUGPROCAMD" },
-            else => null,
-        },
-        .DebugMessageCallbackARB => switch (param_index) {
-            0 => .{ .name = "callback", .type_expr = "?DEBUGPROCARB" },
-            else => null,
-        },
-        .DebugMessageCallbackKHR => switch (param_index) {
-            0 => .{ .name = "callback", .type_expr = "?DEBUGPROCKHR" },
+        inline .DebugMessageCallback,
+        .DebugMessageCallbackAMD,
+        .DebugMessageCallbackARB,
+        .DebugMessageCallbackKHR,
+        => |tag| switch (param_index) {
+            0 => .{ .name = "callback", .type_expr = "?" ++ switch (tag) {
+                .DebugMessageCallbackAMD => "DEBUGPROCAMD",
+                .DebugMessageCallbackARB => "DEBUGPROCARB",
+                .DebugMessageCallbackKHR => "DEBUGPROCKHR",
+                else => "DEBUGPROC",
+            } },
             else => null,
         },
         .DeleteSync,
@@ -867,6 +902,10 @@ fn paramOverride(command: registry.Command.Name, param_index: usize) ?struct {
             0 => .{ .name = "sync_", .type_expr = "?sync" },
             else => null,
         },
+        .DrawElements => switch (param_index) {
+            3 => .{ .name = "indices", .type_expr = "usize" },
+            else => null,
+        },
         .EGLImageTargetRenderbufferStorageOES,
         .EGLImageTargetTexStorageEXT,
         .EGLImageTargetTexture2DOES,
@@ -875,7 +914,72 @@ fn paramOverride(command: registry.Command.Name, param_index: usize) ?struct {
             0 => .{ .name = "image", .type_expr = "eglImageOES" },
             else => null,
         },
-        .GetBooleani_v => switch (param_index) {
+        .GenBuffers,
+        .GenBuffersARB,
+        => switch (param_index) {
+            1 => .{ .name = "buffers", .type_expr = "[*]uint" },
+            else => null,
+        },
+        .GenFramebuffers,
+        .GenFramebuffersEXT,
+        .GenFramebuffersOES,
+        => switch (param_index) {
+            1 => .{ .name = "framebuffers", .type_expr = "[*]uint" },
+            else => null,
+        },
+        .GenProgramPipelines,
+        .GenProgramPipelinesEXT,
+        => switch (param_index) {
+            1 => .{ .name = "pipelines", .type_expr = "[*]uint" },
+            else => null,
+        },
+        .GenQueries,
+        .GenQueriesARB,
+        .GenQueriesEXT,
+        .GenTransformFeedbacks,
+        .GenTransformFeedbacksNV,
+        => switch (param_index) {
+            1 => .{ .name = "ids", .type_expr = "[*]uint" },
+            else => null,
+        },
+        .GenRenderbuffers,
+        .GenRenderbuffersEXT,
+        .GenRenderbuffersOES,
+        => switch (param_index) {
+            1 => .{ .name = "renderbuffers", .type_expr = "[*]uint" },
+            else => null,
+        },
+        .GenSamplers => switch (param_index) {
+            1 => .{ .name = "samplers", .type_expr = "[*]uint" },
+            else => null,
+        },
+        .GenTextures,
+        .GenTexturesEXT,
+        => switch (param_index) {
+            1 => .{ .name = "textures", .type_expr = "[*]uint" },
+            else => null,
+        },
+        .GenVertexArrays,
+        .GenVertexArraysAPPLE,
+        .GenVertexArraysOES,
+        => switch (param_index) {
+            1 => .{ .name = "arrays", .type_expr = "[*]uint" },
+            else => null,
+        },
+        inline .GetAttribLocation,
+        .GetAttribLocationARB,
+        .GetUniformLocation,
+        .GetUniformLocationARB,
+        => |tag| switch (param_index) {
+            1 => .{ .name = "name", .type_expr = "[*:0]const " ++ switch (tag) {
+                .GetAttribLocationARB, .GetUniformLocationARB => "charARB",
+                else => "char",
+            } },
+            else => null,
+        },
+        .GetBooleanIndexedvEXT,
+        .GetBooleani_v,
+        => switch (param_index) {
             2 => .{ .name = "data", .type_expr = "[*]boolean" },
             else => null,
         },
@@ -883,16 +987,24 @@ fn paramOverride(command: registry.Command.Name, param_index: usize) ?struct {
             1 => .{ .name = "data", .type_expr = "[*]boolean" },
             else => null,
         },
-        .GetDoublei_v => switch (param_index) {
-            2 => .{ .name = "data", .type_expr = "[*]double" },
+        .GetDoubleIndexedvEXT,
+        .GetDoublei_v,
+        .GetDoublei_vEXT,
+        => switch (param_index) {
+            2 => .{ .name = if (command == .GetDoublei_vEXT) "params" else "data", .type_expr = "[*]double" },
             else => null,
         },
         .GetDoublev => switch (param_index) {
             1 => .{ .name = "data", .type_expr = "[*]double" },
             else => null,
         },
-        .GetFloati_v => switch (param_index) {
-            2 => .{ .name = "data", .type_expr = "[*]float" },
+        .GetFloatIndexedvEXT,
+        .GetFloati_v,
+        .GetFloati_vEXT,
+        .GetFloati_vNV,
+        .GetFloati_vOES,
+        => switch (param_index) {
+            2 => .{ .name = if (command == .GetFloati_vEXT) "params" else "data", .type_expr = "[*]float" },
             else => null,
         },
         .GetFloatv => switch (param_index) {
@@ -903,11 +1015,17 @@ fn paramOverride(command: registry.Command.Name, param_index: usize) ?struct {
             2 => .{ .name = "data", .type_expr = "[*]int64" },
             else => null,
         },
-        .GetInteger64v => switch (param_index) {
-            1 => .{ .name = "data", .type_expr = "[*]int64" },
+        .GetInteger64v,
+        .GetInteger64vAPPLE,
+        .GetInteger64vEXT,
+        => switch (param_index) {
+            1 => .{ .name = if (command == .GetInteger64vAPPLE) "params" else "data", .type_expr = "[*]int64" },
             else => null,
         },
-        .GetIntegeri_v => switch (param_index) {
+        .GetIntegerIndexedvEXT,
+        .GetIntegeri_v,
+        .GetIntegeri_vEXT,
+        => switch (param_index) {
             2 => .{ .name = "data", .type_expr = "[*]int" },
             else => null,
         },
@@ -915,8 +1033,55 @@ fn paramOverride(command: registry.Command.Name, param_index: usize) ?struct {
             1 => .{ .name = "data", .type_expr = "[*]int" },
             else => null,
         },
+        .GetProgramInfoLog,
+        .GetShaderInfoLog,
+        => switch (param_index) {
+            2 => .{ .name = "length", .type_expr = "?*sizei" },
+            3 => .{ .name = "infoLog", .type_expr = "[*]char" },
+            else => null,
+        },
+        .GetProgramiv,
+        .GetShaderiv,
+        => switch (param_index) {
+            2 => .{ .name = "param", .type_expr = "*int" },
+            else => null,
+        },
+        .GetShaderPrecisionFormat => switch (param_index) {
+            2 => .{ .name = "range", .type_expr = "*int" },
+            3 => .{ .name = "precision", .type_expr = "*int" },
+            else => null,
+        },
+        inline .GetShaderSource,
+        .GetShaderSourceARB,
+        => |tag| switch (param_index) {
+            2 => .{ .name = "length", .type_expr = "?*sizei" },
+            3 => .{ .name = "source", .type_expr = "[*]" ++ if (tag == .GetShaderSourceARB) "charARB" else "char" },
+            else => null,
+        },
         .GetVkProcAddrNV => switch (param_index) {
             0 => .{ .name = "name", .type_expr = "[*:0]const char" },
+            else => null,
+        },
+        inline .ShaderSource,
+        .ShaderSourceARB,
+        => |tag| switch (param_index) {
+            2 => .{ .name = "strings", .type_expr = "[*]const [*]const " ++ if (tag == .GetShaderSourceARB) "charARB" else "char" },
+            3 => .{ .name = "lengths", .type_expr = "?[*]const int" },
+            else => null,
+        },
+        .VertexAttribIPointer,
+        .VertexAttribIPointerEXT,
+        .VertexAttribLPointer,
+        .VertexAttribLPointerEXT,
+        .VertexAttribPointerNV,
+        => switch (param_index) {
+            4 => .{ .name = "pointer", .type_expr = "usize" },
+            else => null,
+        },
+        .VertexAttribPointer,
+        .VertexAttribPointerARB,
+        => switch (param_index) {
+            5 => .{ .name = "pointer", .type_expr = "usize" },
             else => null,
         },
         else => null,

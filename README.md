@@ -48,7 +48,7 @@ var procs: gl.ProcTable = undefined;
 
 pub fn main() !void {
     // Create an OpenGL context using a windowing system of your choice.
-    var context = windowing.createContext(...);
+    const context = windowing.createContext(...);
     defer context.destroy();
 
     // Make the OpenGL context current on the calling thread.
@@ -112,7 +112,7 @@ them on the heap instead.
 ### `ProcTable.init`
 
 ```zig
-pub fn init(procs: *ProcTable, locator: anytype) bool {}
+pub fn init(procs: *ProcTable, loader: anytype) bool {}
 ```
 
 Initializes the specified procedure table and returns `true` if successful, `false` otherwise.
@@ -120,16 +120,16 @@ Initializes the specified procedure table and returns `true` if successful, `fal
 A procedure table must be successfully initialized before passing it to `makeProcTableCurrent` or accessing any of
 its fields.
 
-`locator` is duck-typed. Given the prefixed name of an OpenGL command (e.g. `"glClear"`), it should return a pointer to
+`loader` is duck-typed. Given the prefixed name of an OpenGL command (e.g. `"glClear"`), it should return a pointer to
 the corresponding function. It should be able to be used in one of the following two ways:
 
-- `@as(?PROC, locator(@as([*:0]const u8, prefixed_name)))`
-- `@as(?PROC, locator.getProcAddress(@as([*:0]const u8, prefixed_name)))`
+- `@as(?PROC, loader(@as([*:0]const u8, prefixed_name)))`
+- `@as(?PROC, loader.getProcAddress(@as([*:0]const u8, prefixed_name)))`
 
 If your windowing system has a "get procedure address" function, it is usually enough to simply pass that function as
-the `locator` argument.
+the `loader` argument.
 
-No references to `locator` are retained after this function returns.
+No references to `loader` are retained after this function returns.
 
 There is no corresponding `deinit` function.
 
@@ -225,7 +225,7 @@ annotated. There are approximately 3300 commands defined in the API registry and
 that goal sooner. Even fixing up just a few commands would mean a lot!
 
 Overriding parameters/return types is very easy; all you need to do is add additional entries to the
-`paramOverride`/`returnTypeOverride` functions in [`zigglgen/generator.zig`](`zigglgen/generator.zig`), then open a pull
+`paramOverride`/`returnTypeOverride` functions in [`zigglgen/generator.zig`](zigglgen/generator.zig), then open a pull
 request with your changes (bonus points if you also reference relevant OpenGL references page or specifications in the
 description of your pull request).
 
