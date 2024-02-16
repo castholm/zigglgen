@@ -50,7 +50,7 @@ function processApiRegistry ([System.Xml.XmlElement] $registry, [string] $rev) {
     | Select-Object -ExpandProperty Node
     | Select-Object -ExpandProperty name
     | ForEach-Object { stripPrefix $_ }
-    | Sort-Object { glSortKey $_ }
+    | Sort-Object { typeSortKey $_ }
     | ForEach-Object { "@`"$_`"," }
     '    };'
     '};'
@@ -66,7 +66,7 @@ function processApiRegistry ([System.Xml.XmlElement] $registry, [string] $rev) {
     | Select-Object -ExpandProperty Node
     | Select-Object -ExpandProperty name -Unique
     | ForEach-Object { stripPrefix $_ }
-    | Sort-Object { glSortKey $_ }
+    | Sort-Object { constantSortKey $_ }
     | ForEach-Object { "@`"$_`"," }
     '    };'
     '};'
@@ -82,7 +82,7 @@ function processApiRegistry ([System.Xml.XmlElement] $registry, [string] $rev) {
     | Select-Object -ExpandProperty Node
     | Select-Object -ExpandProperty name
     | ForEach-Object { stripPrefix $_ }
-    | Sort-Object { glSortKey $_ }
+    | Sort-Object { commandSortKey $_ }
     | ForEach-Object { "@`"$_`"," }
     '    };'
     ''
@@ -121,7 +121,7 @@ function processApiRegistry ([System.Xml.XmlElement] $registry, [string] $rev) {
     | Select-Object -ExpandProperty Node
     | Select-Object -ExpandProperty name
     | ForEach-Object { stripPrefix $_ }
-    | Sort-Object { glSortKey $_ }
+    | Sort-Object { extensionSortKey $_ }
     | ForEach-Object { "@`"$_`"," }
     '    };'
     '};'
@@ -142,7 +142,7 @@ function processApiRegistry ([System.Xml.XmlElement] $registry, [string] $rev) {
     $registry
     | Select-Xml 'types/type'
     | Select-Object -ExpandProperty Node
-    | Sort-Object { glSortKey (stripPrefix $_.name) }
+    | Sort-Object { typeSortKey (stripPrefix $_.name) }
     | ForEach-Object {
         '.{'
         ".name = .@`"$(stripPrefix $_.name)`""
@@ -155,7 +155,7 @@ function processApiRegistry ([System.Xml.XmlElement] $registry, [string] $rev) {
     $registry
     | Select-Xml 'enums/enum'
     | Select-Object -ExpandProperty Node
-    | Sort-Object { glSortKey (stripPrefix $_.name) }, api
+    | Sort-Object { constantSortKey (stripPrefix $_.name) }, api
     | ForEach-Object {
         '.{'
         ".name = .@`"$(stripPrefix $_.name)`","
@@ -169,7 +169,7 @@ function processApiRegistry ([System.Xml.XmlElement] $registry, [string] $rev) {
     $registry
     | Select-Xml 'commands/command'
     | Select-Object -ExpandProperty Node
-    | Sort-Object { glSortKey (stripPrefix $_.proto.name) }
+    | Sort-Object { commandSortKey (stripPrefix $_.proto.name) }
     | ForEach-Object {
         '.{'
         ".name = .@`"$(stripPrefix $_.proto.name)`","
@@ -208,7 +208,13 @@ function processApiRegistry ([System.Xml.XmlElement] $registry, [string] $rev) {
                 'enum' { 1; break }
                 'command' { 2; break }
             }
-        }, { glSortKey (stripPrefix $_.name) }
+        }, {
+            switch ($_.LocalName) {
+                'type' { typeSortKey (stripPrefix $_.name); break }
+                'enum' { constantSortKey (stripPrefix $_.name); break }
+                'command' { commandSortKey (stripPrefix $_.name); break }
+            }
+        }
         | ForEach-Object {
             '.{'
             ".name = .{ $(
@@ -232,7 +238,13 @@ function processApiRegistry ([System.Xml.XmlElement] $registry, [string] $rev) {
                 'enum' { 1; break }
                 'command' { 2; break }
             }
-        }, { glSortKey (stripPrefix $_.name) }
+        }, {
+            switch ($_.LocalName) {
+                'type' { typeSortKey (stripPrefix $_.name); break }
+                'enum' { constantSortKey (stripPrefix $_.name); break }
+                'command' { commandSortKey (stripPrefix $_.name); break }
+            }
+        }
         | ForEach-Object {
             '.{'
             ".name = .{ $(
@@ -254,7 +266,7 @@ function processApiRegistry ([System.Xml.XmlElement] $registry, [string] $rev) {
     $registry
     | Select-Xml 'extensions/extension'
     | Select-Object -ExpandProperty Node
-    | Sort-Object { glSortKey (stripPrefix $_.name) }
+    | Sort-Object { extensionSortKey (stripPrefix $_.name) }
     | ForEach-Object {
         '.{'
         ".name = .@`"$(stripPrefix $_.name)`","
@@ -269,7 +281,13 @@ function processApiRegistry ([System.Xml.XmlElement] $registry, [string] $rev) {
                 'enum' { 1; break }
                 'command' { 2; break }
             }
-        }, { glSortKey (stripPrefix $_.name) }
+        }, {
+            switch ($_.LocalName) {
+                'type' { typeSortKey (stripPrefix $_.name); break }
+                'enum' { constantSortKey (stripPrefix $_.name); break }
+                'command' { commandSortKey (stripPrefix $_.name); break }
+            }
+        }
         | ForEach-Object {
             '.{'
             ".name = .{ $(
@@ -316,7 +334,7 @@ function processGeneratorOptions ([System.Xml.XmlElement] $registry, [string] $r
     | Select-Object -ExpandProperty Node
     | Select-Object -ExpandProperty name
     | ForEach-Object { stripPrefix $_ }
-    | Sort-Object { glSortKey $_ }
+    | Sort-Object { extensionSortKey $_ }
     | ForEach-Object { "@`"$_`"," }
     '};'
     ''
@@ -331,16 +349,87 @@ function stripPrefix([string] $str) {
     $str -creplace '\A(GL_?|gl|struct\s+_*)', ''
 }
 
-function glSortKey ([string] $str) {
+function typeSortKey([string] $str) {
+    $null = $str -cmatch @"
+(?x)
+\A
+(?<base>.+?)
+(?<extension>3DFX|AMD|ANDROID|ANGLE|APPLE|ARB|ARM|ATI|DMP|EXT|FJ|GREMEDY|HP|IBM|IMG|INGR|INTEL|KHR|MESA|MESAX|NV|NVX|OES|OML|OVR|PGI|QCOM|REND|S3|SGI|SGIS|SGIX|SUN|SUNX|VIV|WIN)?
+\z
+"@
+    (
+        (
+            [regex]::Replace($Matches.base, '[0-9]+', { param ($m) $m.Value.PadLeft(5, '0') }) -csplit '(?<=[a-z])(?=[A-Z0-9])|(?<=[A-Z0-9])(?=[A-Z][a-z])'
+            | ForEach-Object { basicSortKey $_ }
+        ) -join '001'
+    ) + "000$(basicSortKey $Matches.extension)"
+}
+
+function constantSortKey([string] $str) {
+    $null = $str -cmatch @"
+(?x)
+\A
+(?<base>.+?)
+(?:_(?<extension>3DFX|AMD|ANDROID|ANGLE|APPLE|ARB|ARM|ATI|DMP|EXT|FJ|GREMEDY|HP|IBM|IMG|INGR|INTEL|KHR|MESA|MESAX|NV|NVX|OES|OML|OVR|PGI|QCOM|REND|S3|SGI|SGIS|SGIX|SUN|SUNX|VIV|WIN))?
+\z
+"@
+    (
+        (
+            [regex]::Replace($Matches.base, '[0-9]+', { param ($m) $m.Value.PadLeft(5, '0') }) -split '_'
+            | ForEach-Object { basicSortKey $_ }
+        ) -join '001'
+    ) + "000$(basicSortKey $Matches.extension)"
+}
+
+function commandSortKey ([string] $str) {
+    $null = $str -cmatch @"
+(?x)
+\A
+(?<base>.+?)
+(?<type>
+    b(?<!Attrib)|
+    s(?<!Access|Address|Arrays|Bias|Bindless|Bounds|Buffers|Commands|Controls|Coords|Cores|Counters|Elements|Feedbacks|Fences|Framebuffers|Glyphs|Groups|Indices|Instruments|Layers|Levels|Lists|Maps|Markers|Metrics|Monitors|Names|Objects|Ops|Parameters|Paths|Pipelines|Pixels|Points|Programs|Queries|Rates|Rectangles|Regions|Renderbuffers|Samplers|Samples|Segments|Semaphores|Shaders|Stages|States|Status|Surfaces|Symbols|Tasks|Textures|Threads|Triangles|Values|Varyings)|
+    i(?<!Bufferfi|Disablei|Enablei|Equationi|Fini|Framebufferfi|Funci|Maski|Separatei|Statei|Stringi)|
+    i64|
+    ub|
+    us(?<!Status)|
+    ui|
+    ui64|
+    x(?<!Box|Index|Matrix|Tex|Vertex)|
+    h(?<!Depth|Finish|Flush|Length|Path|Push|Through|Width)|
+    f|
+    d(?<!Advanced|Blend|Coord|Enabled|End|Fixed|Indexed|Keyed)
+)?
+(?<array>
+    i(?<!Fini)|
+    v|
+    i_v
+)?
+(?<extension>3DFX|AMD|ANDROID|ANGLE|APPLE|ARB|ARM|ATI|DMP|EXT|FJ|GREMEDY|HP|IBM|IMG|INGR|INTEL|KHR|MESA|MESAX|NV|NVX|OES|OML|OVR|PGI|QCOM|REND|S3|SGI|SGIS|SGIX|SUN|SUNX|VIV|WIN)?
+\z
+"@
+    (
+        (
+            [regex]::Replace($Matches.base, '[0-9]+', { param ($m) $m.Value.PadLeft(5, '0') }) -split '_'
+            | ForEach-Object {
+                (
+                    $_ -csplit '(?<=[a-z])(?=[A-Z0-9])|(?<=[A-Z0-9])(?=[A-Z][a-z])'
+                    | ForEach-Object { basicSortKey $_ }
+                ) -join '004'
+            }
+        ) -join '003'
+    ) + "000$(basicSortKey $Matches.type)001$(basicSortKey $Matches.array)002$(basicSortKey $Matches.extension)"
+}
+
+function extensionSortKey([string] $str) {
     (
         [regex]::Replace($str, '[0-9]+', { param ($m) $m.Value.PadLeft(5, '0') }) -split '_'
-        | ForEach-Object {
-            (
-                $_ -csplit '(?<=[a-z])(?=[A-Z0-9])|(?<=[A-Z0-9])(?=[A-Z][a-z])'
-                | ForEach-Object { ($_.GetEnumerator() | ForEach-Object { '{0:000}' -f ([ushort]$_ + 100) }) -join '' }
-            ) -join '0'
-        }
-    ) -join '00'
+        | ForEach-Object { basicSortKey $_ }
+    ) -join '000'
+}
+
+function basicSortKey([string] $str) {
+    (($str ?? '').GetEnumerator() | ForEach-Object { '{0:000}' -f ([ushort]$_ + 744) }) -join ''
 }
 
 function parseDecl ([string] $decl) {
