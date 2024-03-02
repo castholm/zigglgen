@@ -4,7 +4,7 @@ const builtin = @import("builtin");
 const options = @import("generator_options.zig");
 const registry = @import("api_registry.zig");
 
-/// Usage: `generator <api>-<version>[-<profile>] [<extension> ...]`
+/// Usage: `zigglen-generator <api>-<version>[-<profile>] [<extension> ...]`
 pub fn main() !void {
     var arena_state = std.heap.ArenaAllocator.init(std.heap.page_allocator);
     defer arena_state.deinit();
@@ -12,29 +12,40 @@ pub fn main() !void {
     const arena = arena_state.allocator();
 
     var arg_it = try std.process.argsWithAllocator(arena);
-    _ = arg_it.skip();
 
-    const raw_triple = arg_it.next() orelse return handleUserError(error.MissingQuery);
-    const triple = ApiVersionProfile.parse(raw_triple) catch |err| return handleUserError(err);
+    const exe_name = arg_it.next() orelse "zigglen-generator";
+
+    const raw_triple = arg_it.next() orelse printUsageAndExit(exe_name);
+    const triple = ApiVersionProfile.parse(raw_triple) catch |err|
+        return handleApiVersionProfileUserErrorAndExit(err, raw_triple);
     const api, const version, const profile = .{ triple.api, triple.version, triple.profile };
 
     var extensions: ResolvedExtensions = .{};
+    var resolve_everything = false;
     while (arg_it.next()) |raw_extension| {
-        const extension = parseExtension(raw_extension, api) catch |err| return handleUserError(err);
+        if (std.mem.eql(u8, raw_extension, "ZIGGLGEN_everything")) { // For internal testing.
+            resolve_everything = true;
+            continue;
+        }
+        const extension = parseExtension(raw_extension, api) catch |err|
+            return handleExtensionUserErrorAndExit(err, raw_extension, api, version, profile);
         extensions.put(extension, .{});
     }
 
     var types: ResolvedTypes = .{};
     var constants: ResolvedConstants = .{};
     var commands: ResolvedCommands = .{};
-    resolveQuery(api, version, profile, &extensions, &types, &constants, &commands);
+    if (resolve_everything)
+        resolveEverything(&extensions, &types, &constants, &commands)
+    else
+        resolveQuery(api, version, profile, &extensions, &types, &constants, &commands);
 
     var stdout_state = std.io.bufferedWriter(std.io.getStdOut().writer());
-    defer stdout_state.flush() catch {};
-
     const stdout = stdout_state.writer();
 
     try renderCode(stdout, api, version, profile, &extensions, &types, &constants, &commands);
+
+    try stdout_state.flush();
 }
 
 const ApiVersionProfile = struct {
@@ -47,7 +58,15 @@ const ApiVersionProfile = struct {
         const raw_api = raw_it.next().?;
         const raw_version = raw_it.next() orelse return error.MissingVersion;
         const maybe_raw_profile = raw_it.next();
-        if (raw_it.next() != null) return error.InvalidQuery;
+        if (raw_it.next() != null) return error.UnknownExtraField;
+
+        var api: registry.Api.Name = switch (inline for (@typeInfo(options.Api).Enum.fields) |field| {
+            if (std.mem.eql(u8, raw_api, field.name)) break @field(options.Api, field.name);
+        } else return error.InvalidApi) {
+            .gl => .gl,
+            .gles => .gles2,
+            .glsc => .glsc2,
+        };
 
         const version: [2]u8 = inline for (@typeInfo(options.Version).Enum.fields) |field| {
             if (std.mem.eql(u8, raw_version, field.name)) {
@@ -58,14 +77,6 @@ const ApiVersionProfile = struct {
                 };
             }
         } else return error.InvalidVersion;
-
-        const api: registry.Api.Name = switch (inline for (@typeInfo(options.Api).Enum.fields) |field| {
-            if (std.mem.eql(u8, raw_api, field.name)) break @field(options.Api, field.name);
-        } else return error.InvalidApi) {
-            .gl => .gl,
-            .gles => if (version[0] >= 2) .gles2 else .gles1,
-            .glsc => .glsc2,
-        };
 
         var maybe_profile: ?registry.ProfileName = if (maybe_raw_profile) |raw_profile|
             switch (inline for (@typeInfo(options.Profile).Enum.fields) |field| {
@@ -78,6 +89,11 @@ const ApiVersionProfile = struct {
             }
         else
             null;
+
+        // Fix up API
+        if (version[0] < 2) {
+            api = .gles1;
+        }
 
         // Validate version
         if (api == .gles1) {
@@ -119,13 +135,13 @@ const ApiVersionProfile = struct {
     }
 
     const ParseError = error{
-        InvalidQuery,
         InvalidApi,
-        InvalidVersion,
-        InvalidProfile,
         MissingVersion,
+        InvalidVersion,
         UnsupportedVersion,
+        InvalidProfile,
         UnsupportedProfile,
+        UnknownExtraField,
     };
 };
 
@@ -156,10 +172,56 @@ const ParseExtensionError = error{
     UnsupportedExtension,
 };
 
-const UserError = error{MissingQuery} || ApiVersionProfile.ParseError || ParseExtensionError;
+fn printUsageAndExit(exe_name: []const u8) noreturn {
+    std.debug.print("Usage: {s} <api>-<version>[-<profile>] [<extension> ...]", .{std.fs.path.basename(exe_name)});
+    std.process.exit(1);
+}
 
-fn handleUserError(err: UserError) noreturn {
-    std.log.err("{s}", .{@errorName(err)});
+fn handleApiVersionProfileUserErrorAndExit(
+    err: ApiVersionProfile.ParseError,
+    raw_triple: []const u8,
+) noreturn {
+    var raw_it = std.mem.splitScalar(u8, raw_triple, '-');
+    const raw_api = raw_it.next().?;
+    const raw_version = raw_it.next();
+    const raw_profile = raw_it.next();
+    const raw_extra = raw_it.next();
+    switch (err) {
+        error.InvalidApi,
+        => std.log.err("API '{s}' is not a supported API", .{raw_api}),
+        error.MissingVersion,
+        => std.log.err("missing version field after API field", .{}),
+        error.InvalidVersion,
+        error.UnsupportedVersion,
+        => std.log.err("version '{s}' is not a supported version of '{s}'", .{ raw_version.?, raw_api }),
+        error.InvalidProfile,
+        error.UnsupportedProfile,
+        => std.log.err("profile '{s}' is not a supported profile of '{s}-{s}'", .{ raw_profile.?, raw_api, raw_version.? }),
+        error.UnknownExtraField,
+        => std.log.err("unknown extra value '{s}' after profile field", .{raw_extra.?}),
+    }
+    std.process.exit(1);
+}
+
+fn handleExtensionUserErrorAndExit(
+    err: ParseExtensionError,
+    raw_extension: []const u8,
+    api: registry.Api.Name,
+    version: [2]u8,
+    profile: ?registry.ProfileName,
+) noreturn {
+    switch (err) {
+        error.InvalidExtension,
+        error.UnsupportedExtension,
+        => std.log.err("extension '{s}' is not a supported extension of '{s}-{}.{}{s}{s}'", .{
+            raw_extension,
+            @tagName(api),
+            version[0],
+            version[1],
+            if (profile != null) "-" else "",
+            if (profile) |x| @tagName(x) else "",
+        }),
+    }
     std.process.exit(1);
 }
 
@@ -315,6 +377,19 @@ fn tryPutCommand(commands: *ResolvedCommands, name: registry.Command.Name, requi
     unreachable;
 }
 
+fn resolveEverything(
+    extensions: *ResolvedExtensions,
+    types: *ResolvedTypes,
+    constants: *ResolvedConstants,
+    commands: *ResolvedCommands,
+) void {
+    @setEvalBranchQuota(100_000);
+    for (std.enums.values(registry.Extension.Name)) |name| extensions.put(name, .{});
+    for (std.enums.values(registry.Type.Name)) |name| _ = tryPutType(types, name);
+    for (std.enums.values(registry.Constant.Name)) |name| _ = tryPutConstant(constants, name, .gl);
+    for (std.enums.values(registry.Command.Name)) |name| _ = tryPutCommand(commands, name, false);
+}
+
 fn renderCode(
     writer: anytype,
     api: registry.Api.Name,
@@ -329,41 +404,40 @@ fn renderCode(
 
     try writer.print(
         \\//! Bindings for {[api_pretty]s} {[version_major]d}.{[version_minor]d}{[sp_profile_pretty]s} generated by zigglgen.
-        \\//!
-        \\//! Example usage:
-        \\//!
-        \\//! ```
-        \\//! const windowing = @import(...);
-        \\//! const gl = @import("gl");
-        \\//!
-        \\//! // Procedure table that will hold OpenGL functions loaded at runtime.
-        \\//! var procs: gl.ProcTable = undefined;
-        \\//!
-        \\//! pub fn main() !void {{
-        \\//!     // Create an OpenGL context using a windowing system of your choice.
-        \\//!     const context = windowing.createContext(...);
-        \\//!     defer context.destroy();
-        \\//!
-        \\//!     // Make the OpenGL context current on the calling thread.
-        \\//!     windowing.makeContextCurrent(context);
-        \\//!     defer windowing.makeContextCurrent(null);
-        \\//!
-        \\//!     // Initialize the procedure table.
-        \\//!     if (!procs.init(windowing.getProcAddress)) return error.InitFailed;
-        \\//!
-        \\//!     // Make the procedure table current on the calling thread.
-        \\//!     gl.makeProcTableCurrent(&procs);
-        \\//!     defer gl.makeProcTableCurrent(null);
-        \\//!
-        \\//!     // Issue OpenGL commands to your heart's content!
-        \\//!     const alpha: gl.{[clear_color_type]s} = 1;
-        \\//!     gl.{[clear_color_fn]s}(1, 1, 1, alpha);
-        \\//!     gl.Clear(gl.COLOR_BUFFER_BIT);
-        \\//! }}
-        \\//! ```
         \\
         \\// OpenGL XML API Registry revision: {[registry_revision]s}
         \\// zigglgen version: 0.1.0
+        \\
+        \\// Example usage:
+        \\//
+        \\//     const windowing = @import(...);
+        \\//     const gl = @import("gl");
+        \\//
+        \\//     // Procedure table that will hold OpenGL functions loaded at runtime.
+        \\//     var procs: gl.ProcTable = undefined;
+        \\//
+        \\//     pub fn main() !void {{
+        \\//         // Create an OpenGL context using a windowing system of your choice.
+        \\//         const context = windowing.createContext(...);
+        \\//         defer context.destroy();
+        \\//
+        \\//         // Make the OpenGL context current on the calling thread.
+        \\//         windowing.makeContextCurrent(context);
+        \\//         defer windowing.makeContextCurrent(null);
+        \\//
+        \\//         // Initialize the procedure table.
+        \\//         if (!procs.init(windowing.getProcAddress)) return error.InitFailed;
+        \\//
+        \\//         // Make the procedure table current on the calling thread.
+        \\//         gl.makeProcTableCurrent(&procs);
+        \\//         defer gl.makeProcTableCurrent(null);
+        \\//
+        \\//         // Issue OpenGL commands to your heart's content!
+        \\//         const alpha: gl.{[clear_color_type]s} = 1;
+        \\//         gl.{[clear_color_fn]s}(1, 1, 1, alpha);
+        \\//         gl.Clear(gl.COLOR_BUFFER_BIT);
+        \\//     }}
+        \\//
         \\
         \\const std = @import("std");
         \\const builtin = @import("builtin");
@@ -474,9 +548,9 @@ fn renderCode(
     var constant_it = constants.iterator();
     while (constant_it.next()) |constant| {
         try writer.print(
-            \\pub const {} = 0x{X};
+            \\pub const {} = {s}0x{X};
             \\
-        , .{ fmtDeclId(@tagName(constant.key)), constant.value.value });
+        , .{ fmtDeclId(@tagName(constant.key)), if (constant.value.value < 0) "-" else "", @abs(constant.value.value) });
     }
     try writer.writeAll(
         \\//#endregion Constants
@@ -725,11 +799,13 @@ fn renderCode(
     );
 }
 
-const fmtId = std.zig.fmt.fmtId;
+const fmtId = std.zig.fmtId;
 
 fn fmtDeclId(bytes: []const u8) std.fmt.Formatter(formatDeclId) {
     return .{ .data = bytes };
 }
+
+const stringEscape = if (@hasDecl(std.zig, "stringEscape")) std.zig.stringEscape else std.zig.fmt.stringEscape;
 
 fn formatDeclId(
     bytes: []const u8,
@@ -737,11 +813,11 @@ fn formatDeclId(
     format_options: std.fmt.FormatOptions,
     writer: anytype,
 ) !void {
-    if (std.zig.fmt.isValidId(bytes) and !std.zig.primitives.isPrimitive(bytes)) {
+    if (std.zig.isValidId(bytes) and !std.zig.primitives.isPrimitive(bytes)) {
         return writer.writeAll(bytes);
     }
     try writer.writeAll("@\"");
-    try std.zig.fmt.stringEscape(bytes, "", format_options, writer);
+    try stringEscape(bytes, "", format_options, writer);
     try writer.writeByte('"');
 }
 
@@ -911,7 +987,7 @@ fn paramOverride(command: registry.Command.Name, param_index: usize) ?struct {
         .EGLImageTargetTexture2DOES,
         .EGLImageTargetTextureStorageEXT,
         => switch (param_index) {
-            0 => .{ .name = "image", .type_expr = "eglImageOES" },
+            1 => .{ .name = "image", .type_expr = "eglImageOES" },
             else => null,
         },
         .GenBuffers,
