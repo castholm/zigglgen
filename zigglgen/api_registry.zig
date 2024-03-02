@@ -6245,8 +6245,8 @@ pub const Command = struct {
         Clear,
         ClearAccum,
         ClearAccumxOES,
-        ClearBufferfi,
         ClearBufferfv,
+        ClearBufferfi,
         ClearBufferiv,
         ClearBufferuiv,
         ClearBufferData,
@@ -6267,8 +6267,8 @@ pub const Command = struct {
         ClearNamedBufferDataEXT,
         ClearNamedBufferSubData,
         ClearNamedBufferSubDataEXT,
-        ClearNamedFramebufferfi,
         ClearNamedFramebufferfv,
+        ClearNamedFramebufferfi,
         ClearNamedFramebufferiv,
         ClearNamedFramebufferuiv,
         ClearPixelLocalStorageuiEXT,
@@ -17997,21 +17997,21 @@ pub const commands = [_]Command{
         .return_type_expr = &.{.void},
     },
     .{
+        .name = .ClearBufferfv,
+        .params = &.{
+            .{ .name = "buffer", .type_expr = &.{.{ .type = .@"enum" }} },
+            .{ .name = "drawbuffer", .type_expr = &.{.{ .type = .int }} },
+            .{ .name = "value", .type_expr = &.{ .@"*", .@"const", .{ .type = .float } } },
+        },
+        .return_type_expr = &.{.void},
+    },
+    .{
         .name = .ClearBufferfi,
         .params = &.{
             .{ .name = "buffer", .type_expr = &.{.{ .type = .@"enum" }} },
             .{ .name = "drawbuffer", .type_expr = &.{.{ .type = .int }} },
             .{ .name = "depth", .type_expr = &.{.{ .type = .float }} },
             .{ .name = "stencil", .type_expr = &.{.{ .type = .int }} },
-        },
-        .return_type_expr = &.{.void},
-    },
-    .{
-        .name = .ClearBufferfv,
-        .params = &.{
-            .{ .name = "buffer", .type_expr = &.{.{ .type = .@"enum" }} },
-            .{ .name = "drawbuffer", .type_expr = &.{.{ .type = .int }} },
-            .{ .name = "value", .type_expr = &.{ .@"*", .@"const", .{ .type = .float } } },
         },
         .return_type_expr = &.{.void},
     },
@@ -18205,6 +18205,16 @@ pub const commands = [_]Command{
         .return_type_expr = &.{.void},
     },
     .{
+        .name = .ClearNamedFramebufferfv,
+        .params = &.{
+            .{ .name = "framebuffer", .type_expr = &.{.{ .type = .uint }} },
+            .{ .name = "buffer", .type_expr = &.{.{ .type = .@"enum" }} },
+            .{ .name = "drawbuffer", .type_expr = &.{.{ .type = .int }} },
+            .{ .name = "value", .type_expr = &.{ .@"*", .@"const", .{ .type = .float } } },
+        },
+        .return_type_expr = &.{.void},
+    },
+    .{
         .name = .ClearNamedFramebufferfi,
         .params = &.{
             .{ .name = "framebuffer", .type_expr = &.{.{ .type = .uint }} },
@@ -18212,16 +18222,6 @@ pub const commands = [_]Command{
             .{ .name = "drawbuffer", .type_expr = &.{.{ .type = .int }} },
             .{ .name = "depth", .type_expr = &.{.{ .type = .float }} },
             .{ .name = "stencil", .type_expr = &.{.{ .type = .int }} },
-        },
-        .return_type_expr = &.{.void},
-    },
-    .{
-        .name = .ClearNamedFramebufferfv,
-        .params = &.{
-            .{ .name = "framebuffer", .type_expr = &.{.{ .type = .uint }} },
-            .{ .name = "buffer", .type_expr = &.{.{ .type = .@"enum" }} },
-            .{ .name = "drawbuffer", .type_expr = &.{.{ .type = .int }} },
-            .{ .name = "value", .type_expr = &.{ .@"*", .@"const", .{ .type = .float } } },
         },
         .return_type_expr = &.{.void},
     },

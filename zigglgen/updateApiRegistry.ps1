@@ -398,10 +398,11 @@ function commandSortKey ([string] $str) {
     x(?<!Box|Index|Matrix|Tex|Vertex)|
     h(?<!Depth|Finish|Flush|Length|Path|Push|Through|Width)|
     f|
+    fi|
     d(?<!Advanced|Blend|Coord|Enabled|End|Fixed|Indexed|Keyed)
 )?
 (?<array>
-    i(?<!Fini)|
+    i(?<!Bufferfi|Fini|Framebufferfi)|
     v|
     i_v
 )?
