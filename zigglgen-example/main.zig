@@ -103,15 +103,15 @@ pub fn main() !void {
     defer gl.UseProgram(0);
 
     var vao: c_uint = undefined;
-    gl.GenVertexArrays(1, &vao);
-    defer gl.DeleteVertexArrays(1, &vao);
+    gl.GenVertexArrays(1, @ptrCast(&vao));
+    defer gl.DeleteVertexArrays(1, @ptrCast(&vao));
 
     gl.BindVertexArray(vao);
     defer gl.BindVertexArray(0);
 
     var vbo: c_uint = undefined;
-    gl.GenBuffers(1, &vbo);
-    defer gl.DeleteBuffers(1, &vbo);
+    gl.GenBuffers(1, @ptrCast(&vbo));
+    defer gl.DeleteBuffers(1, @ptrCast(&vbo));
 
     gl.BindBuffer(gl.ARRAY_BUFFER, vbo);
     defer gl.BindBuffer(gl.ARRAY_BUFFER, 0);
@@ -135,7 +135,7 @@ pub fn main() !void {
         gl.FLOAT,
         gl.FALSE,
         @sizeOf(Vertex),
-        @ptrFromInt(@offsetOf(Vertex, "position")),
+        @offsetOf(Vertex, "position"),
     );
 
     const color_attrib: c_uint = @intCast(gl.GetAttribLocation(program, "a_Color"));
@@ -146,7 +146,7 @@ pub fn main() !void {
         gl.FLOAT,
         gl.FALSE,
         @sizeOf(Vertex),
-        @ptrFromInt(@offsetOf(Vertex, "color")),
+        @offsetOf(Vertex, "color"),
     );
 
     main_loop: while (true) {

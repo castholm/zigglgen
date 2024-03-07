@@ -11,7 +11,7 @@ but more recent versions may also work.
 1\. Run `zig fetch` to add the zigglgen package to your `build.zig.zon` manifest:
 
 ```sh
-zig fetch https://github.com/castholm/zigglgen/releases/download/v0.1.0/zigglgen.tar.gz --save
+zig fetch https://github.com/castholm/zigglgen/releases/download/v0.2.0/zigglgen.tar.gz --save
 ```
 
 2\. Generate a set of OpenGL bindings in your `build.zig` build script:
