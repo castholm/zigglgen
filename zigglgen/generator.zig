@@ -225,35 +225,31 @@ fn handleExtensionUserErrorAndExit(
     std.process.exit(1);
 }
 
-const ResolvedExtensions = with_quota: {
+comptime {
     @setEvalBranchQuota(100_000);
-    break :with_quota std.EnumMap(registry.Extension.Name, struct {
-        commands: with_quota: {
-            @setEvalBranchQuota(100_000);
-            break :with_quota std.EnumSet(registry.Command.Name);
-        } = .{},
-    });
-};
-const ResolvedTypes = with_quota: {
-    @setEvalBranchQuota(100_000);
-    break :with_quota std.EnumMap(registry.Type.Name, struct {
-        requires: ?registry.Type.Name = null,
-    });
-};
-const ResolvedConstants = with_quota: {
-    @setEvalBranchQuota(100_000);
-    break :with_quota std.EnumMap(registry.Constant.Name, struct {
-        value: i128,
-    });
-};
-const ResolvedCommands = with_quota: {
-    @setEvalBranchQuota(100_000);
-    break :with_quota std.EnumMap(registry.Command.Name, struct {
-        params: []const registry.Command.Param,
-        return_type_expr: []const registry.Command.Token,
-        required: bool = false,
-    });
-};
+    _ = std.enums.EnumIndexer(registry.Extension.Name);
+    _ = std.enums.EnumIndexer(registry.Type.Name);
+    _ = std.enums.EnumIndexer(registry.Constant.Name);
+    _ = std.enums.EnumIndexer(registry.Command.Name);
+}
+
+const ResolvedExtensions = std.EnumMap(registry.Extension.Name, struct {
+    commands: std.EnumSet(registry.Command.Name) = .{},
+});
+
+const ResolvedTypes = std.EnumMap(registry.Type.Name, struct {
+    requires: ?registry.Type.Name = null,
+});
+
+const ResolvedConstants = std.EnumMap(registry.Constant.Name, struct {
+    value: i128,
+});
+
+const ResolvedCommands = std.EnumMap(registry.Command.Name, struct {
+    params: []const registry.Command.Param,
+    return_type_expr: []const registry.Command.Token,
+    required: bool = false,
+});
 
 fn resolveQuery(
     api: registry.Api.Name,
