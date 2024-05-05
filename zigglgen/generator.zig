@@ -91,7 +91,7 @@ const ApiVersionProfile = struct {
             null;
 
         // Fix up API
-        if (version[0] < 2) {
+        if (api == .gles2 and version[0] < 2) {
             api = .gles1;
         }
 
