@@ -47,6 +47,7 @@ pub fn generateBindingsSourceFile(b: *std.Build, options: GeneratorOptions) std.
     return output;
 }
 
+// TODO 2024.5.0-mach: Replace with 'b.dependencyFromBuildZig'.
 fn thisDependency(b: *std.Build, args: anytype) *std.Build.Dependency {
     find_dep: {
         const all_pkgs = @import("root").dependencies.packages;

@@ -3,12 +3,12 @@
     .version = "0.0.0",
     .dependencies = .{
         .@"mach-glfw" = .{
-            .url = "https://pkg.machengine.org/mach-glfw/63da35e57c3695a787b927e69e4140eb74ffc234.tar.gz",
-            .hash = "1220fda87b59df6353864651cdd3943f1159d8d517a45cd67bed493fe6c0a0c78c17",
+            .url = "https://pkg.machengine.org/mach-glfw/42fe7ee494d36bee8a82c1563c291d8314a41823.tar.gz",
+            .hash = "1220a72c54b4a3674a1e5a907ac6ea33d1868681f187f5a07f3cfb562ff7cf2c63e0",
         },
         .zigglgen = .{
-            .url = "https://github.com/castholm/zigglgen/releases/download/v0.2.1/zigglgen.tar.gz",
-            .hash = "122059d1ff6787eedb40771eabb0f04d04fe299bd1bae7b216c4a9d894719c2a148a",
+            .url = "https://github.com/castholm/zigglgen/releases/download/v0.2.2/zigglgen.tar.gz",
+            .hash = "1220b0b1d61dfe8a244a3928b20cfa596e252656cca90120c26661898986ce3d1f82",
         },
     },
     .paths = .{
