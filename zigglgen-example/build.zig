@@ -14,7 +14,7 @@ pub fn build(b: *std.Build) void {
 
     const exe = b.addExecutable(.{
         .name = "zigglgen-example",
-        .root_source_file = .{ .path = "main.zig" },
+        .root_source_file = b_path(b, "main.zig"),
         .target = target,
         .optimize = optimize,
     });
@@ -28,7 +28,7 @@ pub fn build(b: *std.Build) void {
     if (use_gles) {
         // Use the vendored OpenGL ES 3.0 bindings.
         exe.root_module.addAnonymousImport("gl", .{
-            .root_source_file = .{ .path = "gles3.zig" },
+            .root_source_file = b_path(b, "gles3.zig"),
         });
     } else {
         // Generate OpenGL 4.1 bindings at build time.
@@ -58,4 +58,12 @@ pub fn build(b: *std.Build) void {
 
     const update_gles = b.step("update-gles-bindings", "Update 'gles3.zig'");
     update_gles.dependOn(&copy_gles.step);
+}
+
+// TODO 2024.5.0-mach: Replace with 'b.path'.
+fn b_path(b: *std.Build, sub_path: []const u8) std.Build.LazyPath {
+    return if (@hasDecl(std.Build, "path"))
+        b.path(sub_path)
+    else
+        .{ .path = sub_path };
 }

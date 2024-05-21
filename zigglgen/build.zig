@@ -6,7 +6,7 @@ pub fn build(b: *std.Build) void {
 
     const generator = b.addExecutable(.{
         .name = "zigglgen-generator",
-        .root_source_file = .{ .path = "generator.zig" },
+        .root_source_file = b_path(b, "generator.zig"),
         .target = target,
         .optimize = optimize,
     });
@@ -61,4 +61,12 @@ fn thisDependency(b: *std.Build, args: anytype) *std.Build.Dependency {
         return b.dependency(dep_name, args);
     }
     std.debug.panic("zigglgen is not a dependency in '{s}'", .{b.pathFromRoot("build.zig.zon")});
+}
+
+// TODO 2024.5.0-mach: Replace with 'b.path'.
+fn b_path(b: *std.Build, sub_path: []const u8) std.Build.LazyPath {
+    return if (@hasDecl(std.Build, "path"))
+        b.path(sub_path)
+    else
+        .{ .path = sub_path };
 }
