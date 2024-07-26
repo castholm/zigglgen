@@ -1,0 +1,15 @@
+.{
+    .name = "example-zig-gamedev-zglfw",
+    .version = "0.0.0",
+    .dependencies = .{
+        .zigglgen = .{
+            .url = "https://github.com/castholm/zigglgen/releases/download/v0.2.3/zigglgen.tar.gz",
+            .hash = "1220f4188a5e1bdbb15fd50e9ea322c0721384eeba9bc077e4179b0b0eeaa7fe4ad9",
+        },
+        .zglfw = .{ .path = "./zig-gamedev/libs/zglfw", },
+        .system_sdk = .{ .path = "./zig-gamedev/libs/system-sdk" },
+    },
+    .paths = .{
+        "",
+    },
+}
