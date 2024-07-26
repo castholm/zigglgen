@@ -1,0 +1,3 @@
+[submodule "example-zig-gamedev-zglfw/zig-gamedev"]
+	path = example-zig-gamedev-zglfw/zig-gamedev
+	url = git@github.com:zig-gamedev/zig-gamedev.git
