@@ -50,7 +50,7 @@ pub fn build(b: *std.Build) void {
 
     // Set up a maintenance task step for updating the OpenGL ES 3.0 bindings.
     const copy_gles = b.addWriteFiles();
-    copy_gles.addCopyFileToSource(@import("zigglgen").generateBindingsSourceFile(b, .{
+    _ = copy_gles.addCopyFile(@import("zigglgen").generateBindingsSourceFile(b, .{
         .api = .gles,
         .version = .@"3.0",
         .extensions = &.{ .EXT_clip_control, .NV_scissor_exclusive },

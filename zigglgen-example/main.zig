@@ -131,7 +131,7 @@ pub fn main() !void {
     gl.EnableVertexAttribArray(position_attrib);
     gl.VertexAttribPointer(
         position_attrib,
-        @typeInfo(@TypeOf(@as(Vertex, undefined).position)).Array.len,
+        @typeInfo(@TypeOf(@as(Vertex, undefined).position)).array.len,
         gl.FLOAT,
         gl.FALSE,
         @sizeOf(Vertex),
@@ -142,7 +142,7 @@ pub fn main() !void {
     gl.EnableVertexAttribArray(color_attrib);
     gl.VertexAttribPointer(
         color_attrib,
-        @typeInfo(@TypeOf(@as(Vertex, undefined).color)).Array.len,
+        @typeInfo(@TypeOf(@as(Vertex, undefined).color)).array.len,
         gl.FLOAT,
         gl.FALSE,
         @sizeOf(Vertex),
