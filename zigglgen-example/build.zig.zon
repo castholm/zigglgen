@@ -1,6 +1,6 @@
 .{
     .name = "zigglgen-example",
-    .version = "0.0.0",
+    .version = "0.2.3",
     .dependencies = .{
         .@"mach-glfw" = .{
             .url = "https://pkg.machengine.org/mach-glfw/42fe7ee494d36bee8a82c1563c291d8314a41823.tar.gz",
