@@ -7,7 +7,7 @@
             .hash = "1220a72c54b4a3674a1e5a907ac6ea33d1868681f187f5a07f3cfb562ff7cf2c63e0",
         },
         .zigglgen = .{
-            .path = "../zigglgen",
+            .path = "..",
         },
     },
     .paths = .{
