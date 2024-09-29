@@ -60,7 +60,7 @@ const ApiVersionProfile = struct {
         const maybe_raw_profile = raw_it.next();
         if (raw_it.next() != null) return error.UnknownExtraField;
 
-        var api: registry.Api.Name = switch (inline for (@typeInfo(options.Api).Enum.fields) |field| {
+        var api: registry.Api.Name = switch (inline for (@typeInfo(options.Api).@"enum".fields) |field| {
             if (std.mem.eql(u8, raw_api, field.name)) break @field(options.Api, field.name);
         } else return error.InvalidApi) {
             .gl => .gl,
@@ -68,7 +68,7 @@ const ApiVersionProfile = struct {
             .glsc => .glsc2,
         };
 
-        const version: [2]u8 = inline for (@typeInfo(options.Version).Enum.fields) |field| {
+        const version: [2]u8 = inline for (@typeInfo(options.Version).@"enum".fields) |field| {
             if (std.mem.eql(u8, raw_version, field.name)) {
                 const dot = std.mem.indexOfScalar(u8, raw_version, '.').?;
                 break .{
@@ -79,7 +79,7 @@ const ApiVersionProfile = struct {
         } else return error.InvalidVersion;
 
         var maybe_profile: ?registry.ProfileName = if (maybe_raw_profile) |raw_profile|
-            switch (inline for (@typeInfo(options.Profile).Enum.fields) |field| {
+            switch (inline for (@typeInfo(options.Profile).@"enum".fields) |field| {
                 if (std.mem.eql(u8, raw_profile, field.name)) break @field(options.Profile, field.name);
             } else return error.InvalidProfile) {
                 .core => .core,
@@ -149,12 +149,12 @@ fn parseExtension(raw: []const u8, api: registry.Api.Name) ParseExtensionError!r
     // Statically assert that 'generator_options.zig' and 'api_registry.zig' are in sync.
     comptime {
         @setEvalBranchQuota(100_000);
-        for (@typeInfo(options.Extension).Enum.fields, @typeInfo(registry.Extension.Name).Enum.fields) |a, b| {
+        for (@typeInfo(options.Extension).@"enum".fields, @typeInfo(registry.Extension.Name).@"enum".fields) |a, b| {
             std.debug.assert(std.mem.eql(u8, a.name, b.name));
         }
     }
 
-    const extension: registry.Extension.Name = inline for (@typeInfo(registry.Extension.Name).Enum.fields) |field| {
+    const extension: registry.Extension.Name = inline for (@typeInfo(registry.Extension.Name).@"enum".fields) |field| {
         if (std.mem.eql(u8, raw, field.name)) break @field(registry.Extension.Name, field.name);
     } else return error.InvalidExtension;
 
