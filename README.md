@@ -4,11 +4,9 @@ The only Zig OpenGL binding generator you need.
 
 ## Installation and usage
 
-zigglgen officially supports the following versions of the Zig compiler:
+This version of zigglgen officially supports the following versions of the Zig compiler:
 
-- `0.12.0-dev.3180+83e578a18`/[`2024.3.0-mach`](https://machengine.org/about/nominated-zig/#202410-mach)
-- `0.12.0`
-- master (last tested with `0.13.0-dev.230+50a141945`)
+- master (last tested with `0.14.0-dev.1671+085cc54aa`)
 
 Older or more recent versions of the compiler are not guaranteed to be compatible.
 
