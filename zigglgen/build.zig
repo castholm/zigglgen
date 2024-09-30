@@ -51,7 +51,7 @@ pub fn generateBindingsSourceFile(b: *std.Build, options: GeneratorOptions) std.
 fn thisDependency(b: *std.Build, args: anytype) *std.Build.Dependency {
     find_dep: {
         const all_pkgs = @import("root").dependencies.packages;
-        const pkg_hash = inline for (@typeInfo(all_pkgs).Struct.decls) |decl| {
+        const pkg_hash = inline for (@typeInfo(all_pkgs).@"struct".decls) |decl| {
             const pkg = @field(all_pkgs, decl.name);
             if (@hasDecl(pkg, "build_zig") and pkg.build_zig == @This()) break decl.name;
         } else break :find_dep;
