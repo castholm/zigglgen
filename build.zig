@@ -6,7 +6,7 @@ pub fn build(b: *std.Build) void {
 
     const generator = b.addExecutable(.{
         .name = "zigglgen-generator",
-        .root_source_file = b_path(b, "generator.zig"),
+        .root_source_file = b.path("generator.zig"),
         .target = target,
         .optimize = optimize,
     });
@@ -32,7 +32,7 @@ pub fn generateBindingsModule(b: *std.Build, options: GeneratorOptions) *std.Bui
 }
 
 pub fn generateBindingsSourceFile(b: *std.Build, options: GeneratorOptions) std.Build.LazyPath {
-    const zigglgen_dep = thisDependency(b, .{});
+    const zigglgen_dep = b.dependencyFromBuildZig(@This(), .{});
     const generator = zigglgen_dep.artifact("zigglgen-generator");
     const run_generator = b.addRunArtifact(generator);
     run_generator.addArg(b.fmt("{s}-{s}{s}{s}", .{
@@ -45,28 +45,4 @@ pub fn generateBindingsSourceFile(b: *std.Build, options: GeneratorOptions) std.
     const output = run_generator.captureStdOut();
     run_generator.captured_stdout.?.basename = "gl.zig";
     return output;
-}
-
-// TODO 2024.5.0-mach: Replace with 'b.dependencyFromBuildZig'.
-fn thisDependency(b: *std.Build, args: anytype) *std.Build.Dependency {
-    find_dep: {
-        const all_pkgs = @import("root").dependencies.packages;
-        const pkg_hash = inline for (@typeInfo(all_pkgs).Struct.decls) |decl| {
-            const pkg = @field(all_pkgs, decl.name);
-            if (@hasDecl(pkg, "build_zig") and pkg.build_zig == @This()) break decl.name;
-        } else break :find_dep;
-        const dep_name = for (b.available_deps) |dep| {
-            if (std.mem.eql(u8, dep[1], pkg_hash)) break dep[0];
-        } else break :find_dep;
-        return b.dependency(dep_name, args);
-    }
-    std.debug.panic("zigglgen is not a dependency in '{s}'", .{b.pathFromRoot("build.zig.zon")});
-}
-
-// TODO 2024.5.0-mach: Replace with 'b.path'.
-fn b_path(b: *std.Build, sub_path: []const u8) std.Build.LazyPath {
-    return if (@hasDecl(std.Build, "path"))
-        b.path(sub_path)
-    else
-        .{ .path = sub_path };
 }
