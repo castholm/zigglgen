@@ -1,2 +1,5 @@
+# Compatibility with old Zig versions
 zig-cache/
+
+.zig-cache/
 zig-out/

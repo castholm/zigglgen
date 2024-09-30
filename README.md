@@ -6,7 +6,7 @@ The only Zig OpenGL binding generator you need.
 
 zigglgen officially supports the following versions of the Zig compiler:
 
-- `0.12.0-dev.3180+83e578a18`/[`2024.3.0-mach`](https://machengine.org/about/nominated-zig/#202410-mach)
+- `0.12.0-dev.3180+83e578a18`/[`2024.3.0-mach`](https://machengine.org/docs/nominated-zig)
 - `0.12.0`
 - master (last tested with `0.13.0-dev.230+50a141945`)
 
@@ -15,7 +15,7 @@ Older or more recent versions of the compiler are not guaranteed to be compatibl
 1\. Run `zig fetch` to add the zigglgen package to your `build.zig.zon` manifest:
 
 ```sh
-zig fetch https://github.com/castholm/zigglgen/releases/download/v0.2.3/zigglgen.tar.gz --save
+zig fetch git+https://github.com/castholm/zigglgen --save
 ```
 
 2\. Generate a set of OpenGL bindings in your `build.zig` build script:
@@ -73,13 +73,13 @@ pub fn main() !void {
  }
 ```
 
-See [`zigglgen-example/`](zigglgen-example/) for a complete example project that creates a window using
+See [`example/`](example/) for a complete example project that creates a window using
 [mach-glfw](https://machengine.org/pkg/mach-glfw/) and draws a triangle to it.
 
 ## API
 
 If you're curious what a generated set of bindings looks like, take a look at
-[`zigglgen-example/gles3.zig`](zigglgen-example/gles3.zig).
+[`example/gles3.zig`](example/gles3.zig).
 
 ### OpenGL symbols
 
@@ -179,7 +179,7 @@ Registry](https://github.com/KhronosGroup/OpenGL-Registry/tree/main/xml) are sup
 - OpenGL ES 2.0 through 3.2
 - OpenGL SC 2.0
 
-The [`zigglgen/updateApiRegistry.ps1`](zigglgen/updateApiRegistry.ps1) PowerShell script is used to fetch the API
+The [`updateApiRegistry.ps1`](updateApiRegistry.ps1) PowerShell script is used to fetch the API
 registry and convert it to a set of Zig source files that are committed to revision control and used by the generator.
 
 ### Why is a thread-local procedure table required?
@@ -221,7 +221,7 @@ under which conditions their features are available.
 
 If you have any issues or suggestions, please open an issue or a pull request.
 
-### Help us define overrides for function parameters and return types!
+### Help us define overrides for function parameters and return types
 
 Due to the nature of the API Registry being designed for C, zigglgen currently generates most pointers types as `[*c]`
 pointers, which is less than ideal. A long-term goal for zigglgen is for every single pointer type to be correctly
@@ -229,7 +229,7 @@ annotated. There are approximately 3300 commands defined in the API registry and
 that goal sooner. Even fixing up just a few commands would mean a lot!
 
 Overriding parameters/return types is very easy; all you need to do is add additional entries to the
-`paramOverride`/`returnTypeOverride` functions in [`zigglgen/generator.zig`](zigglgen/generator.zig), then open a pull
+`paramOverride`/`returnTypeOverride` functions in [`generator.zig`](generator.zig), then open a pull
 request with your changes (bonus points if you also reference relevant OpenGL references page or specifications in the
 description of your pull request).
 
@@ -237,4 +237,4 @@ description of your pull request).
 
 zigglgen is licensed under the [MIT License](LICENSE.md).
 
-See [`zigglgen/THIRD-PARTY-NOTICES.txt`](zigglgen/THIRD-PARTY-NOTICES.txt) for third-party license notices.
+See [`THIRD-PARTY-NOTICES.txt`](THIRD-PARTY-NOTICES.txt) for third-party license notices.
