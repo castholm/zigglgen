@@ -4,6 +4,11 @@ const builtin = @import("builtin");
 const options = @import("zigglgen_options.zig");
 const registry = @import("api_registry.zig");
 
+// For temporary backward compatibility with older Zig versions.
+const type_info_fields = struct {
+    const @"enum" = if (@hasField(std.builtin.Type, "Enum")) "Enum" else "enum";
+};
+
 /// Usage: `zigglen <api>-<version>[-<profile>] [<extension> ...]`
 pub fn main() !void {
     var arena_state = std.heap.ArenaAllocator.init(std.heap.page_allocator);
@@ -60,7 +65,7 @@ const ApiVersionProfile = struct {
         const maybe_raw_profile = raw_it.next();
         if (raw_it.next() != null) return error.UnknownExtraField;
 
-        var api: registry.Api.Name = switch (inline for (@typeInfo(options.Api).Enum.fields) |field| {
+        var api: registry.Api.Name = switch (inline for (@field(@typeInfo(options.Api), type_info_fields.@"enum").fields) |field| {
             if (std.mem.eql(u8, raw_api, field.name)) break @field(options.Api, field.name);
         } else return error.InvalidApi) {
             .gl => .gl,
@@ -68,7 +73,7 @@ const ApiVersionProfile = struct {
             .glsc => .glsc2,
         };
 
-        const version: [2]u8 = inline for (@typeInfo(options.Version).Enum.fields) |field| {
+        const version: [2]u8 = inline for (@field(@typeInfo(options.Version), type_info_fields.@"enum").fields) |field| {
             if (std.mem.eql(u8, raw_version, field.name)) {
                 const dot = std.mem.indexOfScalar(u8, raw_version, '.').?;
                 break .{
@@ -79,7 +84,7 @@ const ApiVersionProfile = struct {
         } else return error.InvalidVersion;
 
         var maybe_profile: ?registry.ProfileName = if (maybe_raw_profile) |raw_profile|
-            switch (inline for (@typeInfo(options.Profile).Enum.fields) |field| {
+            switch (inline for (@field(@typeInfo(options.Profile), type_info_fields.@"enum").fields) |field| {
                 if (std.mem.eql(u8, raw_profile, field.name)) break @field(options.Profile, field.name);
             } else return error.InvalidProfile) {
                 .core => .core,
@@ -149,12 +154,12 @@ fn parseExtension(raw: []const u8, api: registry.Api.Name) ParseExtensionError!r
     // Statically assert that 'zigglgen_options.zig' and 'api_registry.zig' are in sync.
     comptime {
         @setEvalBranchQuota(100_000);
-        for (@typeInfo(options.Extension).Enum.fields, @typeInfo(registry.Extension.Name).Enum.fields) |a, b| {
+        for (@field(@typeInfo(options.Extension), type_info_fields.@"enum").fields, @field(@typeInfo(registry.Extension.Name), type_info_fields.@"enum").fields) |a, b| {
             std.debug.assert(std.mem.eql(u8, a.name, b.name));
         }
     }
 
-    const extension: registry.Extension.Name = inline for (@typeInfo(registry.Extension.Name).Enum.fields) |field| {
+    const extension: registry.Extension.Name = inline for (@field(@typeInfo(registry.Extension.Name), type_info_fields.@"enum").fields) |field| {
         if (std.mem.eql(u8, raw, field.name)) break @field(registry.Extension.Name, field.name);
     } else return error.InvalidExtension;
 
@@ -438,6 +443,18 @@ fn renderCode(
         \\const std = @import("std");
         \\const builtin = @import("builtin");
         \\
+        \\// For temporary backward compatibility with older Zig versions.
+        \\const type_info_fields = struct {{
+        \\    const @"bool" = if (@hasField(std.builtin.Type, "Bool")) "Bool" else "bool";
+        \\    const pointer = if (@hasField(std.builtin.Type, "Pointer")) "Pointer" else "pointer";
+        \\    const @"struct" = if (@hasField(std.builtin.Type, "Struct")) "Struct" else "struct";
+        \\    const optional = if (@hasField(std.builtin.Type, "Optional")) "Optional" else "optional";
+        \\    const @"enum" = if (@hasField(std.builtin.Type, "Enum")) "Enum" else "enum";
+        \\    const @"union" = if (@hasField(std.builtin.Type, "Union")) "Union" else "union";
+        \\    const @"fn" = if (@hasField(std.builtin.Type, "Fn")) "Fn" else "fn";
+        \\}};
+        \\const TypeInfoTag = @field(@typeInfo(std.builtin.Type), type_info_fields.@"union").tag_type.?;
+        \\
         \\/// Information about this set of OpenGL bindings.
         \\pub const info = struct {{
         \\    pub const api = {[api]s};
@@ -622,10 +639,10 @@ fn renderCode(
         \\    pub fn init(procs: *ProcTable, loader: anytype) bool {
         \\        @setEvalBranchQuota(1_000_000);
         \\        var success: u1 = 1;
-        \\        inline for (@typeInfo(ProcTable).Struct.fields) |field_info| {
+        \\        inline for (@field(@typeInfo(ProcTable), type_info_fields.@"struct").fields) |field_info| {
         \\            switch (@typeInfo(field_info.type)) {
-        \\                .Pointer => |ptr_info| switch (@typeInfo(ptr_info.child)) {
-        \\                    .Fn => {
+        \\                @field(TypeInfoTag, type_info_fields.pointer) => |ptr_info| switch (@typeInfo(ptr_info.child)) {
+        \\                    @field(TypeInfoTag, type_info_fields.@"fn") => {
         \\                        success &= @intFromBool(procs.initCommand(loader, field_info.name));
         \\                    },
         \\                    else => comptime unreachable,
@@ -634,16 +651,16 @@ fn renderCode(
     );
     if (any_extensions) {
         try writer.writeAll(
-            \\                .Optional => |opt_info| switch (@typeInfo(opt_info.child)) {
-            \\                    .Pointer => |ptr_info| switch (@typeInfo(ptr_info.child)) {
-            \\                        .Fn => {
+            \\                @field(TypeInfoTag, type_info_fields.optional) => |opt_info| switch (@typeInfo(opt_info.child)) {
+            \\                    @field(TypeInfoTag, type_info_fields.pointer) => |ptr_info| switch (@typeInfo(ptr_info.child)) {
+            \\                        @field(TypeInfoTag, type_info_fields.@"fn") => {
             \\                            @field(procs, field_info.name) = null;
             \\                        },
             \\                        else => comptime unreachable,
             \\                    },
             \\                    else => comptime unreachable,
             \\                },
-            \\                .Bool => {
+            \\                @field(TypeInfoTag, type_info_fields.bool) => {
             \\                    @field(procs, field_info.name) = false;
             \\                },
             \\
@@ -703,15 +720,15 @@ fn renderCode(
         \\            @field(procs, name) = @ptrCast(proc);
         \\            return true;
         \\        } else {
-        \\            return @typeInfo(@TypeOf(@field(procs, name))) == .Optional;
+        \\            return @typeInfo(@TypeOf(@field(procs, name))) == @field(TypeInfoTag, type_info_fields.optional);
         \\        }
         \\    }
         \\
         \\    fn getProcAddress(loader: anytype, prefixed_name: [:0]const u8) ?PROC {
         \\        const loader_info = @typeInfo(@TypeOf(loader));
         \\        const loader_is_fn =
-        \\            loader_info == .Fn or
-        \\            loader_info == .Pointer and @typeInfo(loader_info.Pointer.child) == .Fn;
+        \\            loader_info == @field(TypeInfoTag, type_info_fields.@"fn") or
+        \\            loader_info == @field(TypeInfoTag, type_info_fields.pointer) and @typeInfo(loader_info.Pointer.child) == @field(TypeInfoTag, type_info_fields.@"fn");
         \\        if (loader_is_fn) {
         \\            return @as(?PROC, loader(@as([*:0]const u8, prefixed_name)));
         \\        } else {
