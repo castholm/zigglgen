@@ -1,6 +1,6 @@
 .{
     .name = "zigglgen",
-    .version = "0.2.3",
+    .version = "0.3.0",
     .minimum_zig_version = "0.12.1",
     .paths = .{
         "LICENSE.md",

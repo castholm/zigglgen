@@ -4,18 +4,18 @@ The only Zig OpenGL binding generator you need.
 
 ## Installation and usage
 
-zigglgen officially supports the following versions of the Zig compiler:
+zigglgen currently supports the following versions of the Zig compiler:
 
-- `0.12.0-dev.3180+83e578a18`/[`2024.3.0-mach`](https://machengine.org/about/nominated-zig/#202410-mach)
-- `0.12.0`
-- master (last tested with `0.13.0-dev.230+50a141945`)
+- `0.12.1`
+- `0.13.0`
+- master (last tested with `0.14.0-dev.1767+d23db9427`)
 
 Older or more recent versions of the compiler are not guaranteed to be compatible.
 
 1\. Run `zig fetch` to add the zigglgen package to your `build.zig.zon` manifest:
 
 ```sh
-zig fetch https://github.com/castholm/zigglgen/releases/download/v0.2.3/zigglgen.tar.gz --save
+zig fetch --save git+https://github.com/castholm/zigglgen
 ```
 
 2\. Generate a set of OpenGL bindings in your `build.zig` build script:
