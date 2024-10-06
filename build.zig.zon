@@ -8,7 +8,7 @@
         "api_registry.zig",
         "build.zig",
         "build.zig.zon",
-        "generator.zig",
-        "generator_options.zig",
+        "zigglgen.zig",
+        "zigglgen_options.zig",
     },
 }

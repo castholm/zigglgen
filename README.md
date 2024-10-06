@@ -179,8 +179,8 @@ Registry](https://github.com/KhronosGroup/OpenGL-Registry/tree/main/xml) are sup
 - OpenGL ES 2.0 through 3.2
 - OpenGL SC 2.0
 
-The [`updateApiRegistry.ps1`](updateApiRegistry.ps1) PowerShell script is used to fetch the API
-registry and convert it to a set of Zig source files that are committed to revision control and used by the generator.
+The [`updateApiRegistry.ps1`](updateApiRegistry.ps1) PowerShell script is used to fetch the API registry and convert it
+to a set of Zig source files that are committed to revision control and used by zigglgen.
 
 ### Why is a thread-local procedure table required?
 
@@ -229,9 +229,9 @@ annotated. There are approximately 3300 commands defined in the API registry and
 that goal sooner. Even fixing up just a few commands would mean a lot!
 
 Overriding parameters/return types is very easy; all you need to do is add additional entries to the
-`paramOverride`/`returnTypeOverride` functions in [`generator.zig`](generator.zig), then open a pull
-request with your changes (bonus points if you also reference relevant OpenGL references page or specifications in the
-description of your pull request).
+`paramOverride`/`returnTypeOverride` functions in [`zigglgen.zig`](zigglgen.zig), then open a pull request with your
+changes (bonus points if you also reference relevant OpenGL references page or specifications in the description of your
+pull request).
 
 ## License
 

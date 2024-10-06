@@ -1,10 +1,10 @@
 const std = @import("std");
 const builtin = @import("builtin");
 
-const options = @import("generator_options.zig");
+const options = @import("zigglgen_options.zig");
 const registry = @import("api_registry.zig");
 
-/// Usage: `zigglen-generator <api>-<version>[-<profile>] [<extension> ...]`
+/// Usage: `zigglen <api>-<version>[-<profile>] [<extension> ...]`
 pub fn main() !void {
     var arena_state = std.heap.ArenaAllocator.init(std.heap.page_allocator);
     defer arena_state.deinit();
@@ -13,7 +13,7 @@ pub fn main() !void {
 
     var arg_it = try std.process.argsWithAllocator(arena);
 
-    const exe_name = arg_it.next() orelse "zigglen-generator";
+    const exe_name = arg_it.next() orelse "zigglen";
 
     const raw_triple = arg_it.next() orelse printUsageAndExit(exe_name);
     const triple = ApiVersionProfile.parse(raw_triple) catch |err|
@@ -146,7 +146,7 @@ const ApiVersionProfile = struct {
 };
 
 fn parseExtension(raw: []const u8, api: registry.Api.Name) ParseExtensionError!registry.Extension.Name {
-    // Statically assert that 'generator_options.zig' and 'api_registry.zig' are in sync.
+    // Statically assert that 'zigglgen_options.zig' and 'api_registry.zig' are in sync.
     comptime {
         @setEvalBranchQuota(100_000);
         for (@typeInfo(options.Extension).Enum.fields, @typeInfo(registry.Extension.Name).Enum.fields) |a, b| {
