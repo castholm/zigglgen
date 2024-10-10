@@ -728,7 +728,9 @@ fn renderCode(
         \\        const loader_info = @typeInfo(@TypeOf(loader));
         \\        const loader_is_fn =
         \\            loader_info == @field(TypeInfoTag, type_info_fields.@"fn") or
-        \\            loader_info == @field(TypeInfoTag, type_info_fields.pointer) and @typeInfo(loader_info.Pointer.child) == @field(TypeInfoTag, type_info_fields.@"fn");
+        \\            loader_info == @field(TypeInfoTag, type_info_fields.pointer) and
+        \\                @typeInfo(@field(loader_info, type_info_fields.pointer).child) ==
+        \\                    @field(TypeInfoTag, type_info_fields.@"fn");
         \\        if (loader_is_fn) {
         \\            return @as(?PROC, loader(@as([*:0]const u8, prefixed_name)));
         \\        } else {
