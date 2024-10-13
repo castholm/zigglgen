@@ -3,11 +3,7 @@ const builtin = @import("builtin");
 
 const options = @import("zigglgen_options.zig");
 const registry = @import("api_registry.zig");
-
-// For temporary backward compatibility with older Zig versions.
-const type_info_fields = struct {
-    const @"enum" = if (@hasField(std.builtin.Type, "Enum")) "Enum" else "enum";
-};
+const shims = @import("shims.zig");
 
 /// Usage: `zigglen <api>-<version>[-<profile>] [<extension> ...]`
 pub fn main() !void {
@@ -65,7 +61,7 @@ const ApiVersionProfile = struct {
         const maybe_raw_profile = raw_it.next();
         if (raw_it.next() != null) return error.UnknownExtraField;
 
-        var api: registry.Api.Name = switch (inline for (@field(@typeInfo(options.Api), type_info_fields.@"enum").fields) |field| {
+        var api: registry.Api.Name = switch (inline for (shims.typeInfo(options.Api).@"enum".fields) |field| {
             if (std.mem.eql(u8, raw_api, field.name)) break @field(options.Api, field.name);
         } else return error.InvalidApi) {
             .gl => .gl,
@@ -73,7 +69,7 @@ const ApiVersionProfile = struct {
             .glsc => .glsc2,
         };
 
-        const version: [2]u8 = inline for (@field(@typeInfo(options.Version), type_info_fields.@"enum").fields) |field| {
+        const version: [2]u8 = inline for (shims.typeInfo(options.Version).@"enum".fields) |field| {
             if (std.mem.eql(u8, raw_version, field.name)) {
                 const dot = std.mem.indexOfScalar(u8, raw_version, '.').?;
                 break .{
@@ -84,7 +80,7 @@ const ApiVersionProfile = struct {
         } else return error.InvalidVersion;
 
         var maybe_profile: ?registry.ProfileName = if (maybe_raw_profile) |raw_profile|
-            switch (inline for (@field(@typeInfo(options.Profile), type_info_fields.@"enum").fields) |field| {
+            switch (inline for (shims.typeInfo(options.Profile).@"enum".fields) |field| {
                 if (std.mem.eql(u8, raw_profile, field.name)) break @field(options.Profile, field.name);
             } else return error.InvalidProfile) {
                 .core => .core,
@@ -154,12 +150,12 @@ fn parseExtension(raw: []const u8, api: registry.Api.Name) ParseExtensionError!r
     // Statically assert that 'zigglgen_options.zig' and 'api_registry.zig' are in sync.
     comptime {
         @setEvalBranchQuota(100_000);
-        for (@field(@typeInfo(options.Extension), type_info_fields.@"enum").fields, @field(@typeInfo(registry.Extension.Name), type_info_fields.@"enum").fields) |a, b| {
+        for (shims.typeInfo(options.Extension).@"enum".fields, shims.typeInfo(registry.Extension.Name).@"enum".fields) |a, b| {
             std.debug.assert(std.mem.eql(u8, a.name, b.name));
         }
     }
 
-    const extension: registry.Extension.Name = inline for (@field(@typeInfo(registry.Extension.Name), type_info_fields.@"enum").fields) |field| {
+    const extension: registry.Extension.Name = inline for (shims.typeInfo(registry.Extension.Name).@"enum".fields) |field| {
         if (std.mem.eql(u8, raw, field.name)) break @field(registry.Extension.Name, field.name);
     } else return error.InvalidExtension;
 
@@ -443,18 +439,6 @@ fn renderCode(
         \\const std = @import("std");
         \\const builtin = @import("builtin");
         \\
-        \\// For temporary backward compatibility with older Zig versions.
-        \\const type_info_fields = struct {{
-        \\    const @"bool" = if (@hasField(std.builtin.Type, "Bool")) "Bool" else "bool";
-        \\    const pointer = if (@hasField(std.builtin.Type, "Pointer")) "Pointer" else "pointer";
-        \\    const @"struct" = if (@hasField(std.builtin.Type, "Struct")) "Struct" else "struct";
-        \\    const optional = if (@hasField(std.builtin.Type, "Optional")) "Optional" else "optional";
-        \\    const @"enum" = if (@hasField(std.builtin.Type, "Enum")) "Enum" else "enum";
-        \\    const @"union" = if (@hasField(std.builtin.Type, "Union")) "Union" else "union";
-        \\    const @"fn" = if (@hasField(std.builtin.Type, "Fn")) "Fn" else "fn";
-        \\}};
-        \\const TypeInfoTag = @field(@typeInfo(std.builtin.Type), type_info_fields.@"union").tag_type.?;
-        \\
         \\/// Information about this set of OpenGL bindings.
         \\pub const info = struct {{
         \\    pub const api = {[api]s};
@@ -579,7 +563,7 @@ fn renderCode(
         try renderReturnType(writer, command);
         try writer.print(" {{\n    return ProcTable.current.?.{}", .{fmtDeclId(@tagName(command.key))});
         if (!command.value.required) try writer.writeAll(".?");
-        try writer.writeByte('(');
+        try writer.writeAll("(");
         try renderParams(writer, command, true);
         try writer.writeAll(");\n}\n");
     }
@@ -607,7 +591,7 @@ fn renderCode(
     command_it = commands.iterator();
     while (command_it.next()) |command| {
         try writer.print("    {}: ", .{fmtDeclId(@tagName(command.key))});
-        if (!command.value.required) try writer.writeByte('?');
+        if (!command.value.required) try writer.writeAll("?");
         try writer.writeAll("*const fn (");
         try renderParams(writer, command, false);
         try writer.writeAll(") callconv(APIENTRY) ");
@@ -639,10 +623,10 @@ fn renderCode(
         \\    pub fn init(procs: *ProcTable, loader: anytype) bool {
         \\        @setEvalBranchQuota(1_000_000);
         \\        var success: u1 = 1;
-        \\        inline for (@field(@typeInfo(ProcTable), type_info_fields.@"struct").fields) |field_info| {
-        \\            switch (@typeInfo(field_info.type)) {
-        \\                @field(TypeInfoTag, type_info_fields.pointer) => |ptr_info| switch (@typeInfo(ptr_info.child)) {
-        \\                    @field(TypeInfoTag, type_info_fields.@"fn") => {
+        \\        inline for (shims.typeInfo(ProcTable).@"struct".fields) |field_info| {
+        \\            switch (shims.typeInfo(field_info.type)) {
+        \\                .pointer => |ptr_info| switch (shims.typeInfo(ptr_info.child)) {
+        \\                    .@"fn" => {
         \\                        success &= @intFromBool(procs.initCommand(loader, field_info.name));
         \\                    },
         \\                    else => comptime unreachable,
@@ -651,16 +635,16 @@ fn renderCode(
     );
     if (any_extensions) {
         try writer.writeAll(
-            \\                @field(TypeInfoTag, type_info_fields.optional) => |opt_info| switch (@typeInfo(opt_info.child)) {
-            \\                    @field(TypeInfoTag, type_info_fields.pointer) => |ptr_info| switch (@typeInfo(ptr_info.child)) {
-            \\                        @field(TypeInfoTag, type_info_fields.@"fn") => {
+            \\                .optional => |opt_info| switch (shims.typeInfo(opt_info.child)) {
+            \\                    .pointer => |ptr_info| switch (shims.typeInfo(ptr_info.child)) {
+            \\                        .@"fn" => {
             \\                            @field(procs, field_info.name) = null;
             \\                        },
             \\                        else => comptime unreachable,
             \\                    },
             \\                    else => comptime unreachable,
             \\                },
-            \\                @field(TypeInfoTag, type_info_fields.bool) => {
+            \\                .bool => {
             \\                    @field(procs, field_info.name) = false;
             \\                },
             \\
@@ -720,17 +704,15 @@ fn renderCode(
         \\            @field(procs, name) = @ptrCast(proc);
         \\            return true;
         \\        } else {
-        \\            return @typeInfo(@TypeOf(@field(procs, name))) == @field(TypeInfoTag, type_info_fields.optional);
+        \\            return shims.typeInfo(@TypeOf(@field(procs, name))) == .optional;
         \\        }
         \\    }
         \\
         \\    fn getProcAddress(loader: anytype, prefixed_name: [:0]const u8) ?PROC {
-        \\        const loader_info = @typeInfo(@TypeOf(loader));
+        \\        const loader_info = shims.typeInfo(@TypeOf(loader));
         \\        const loader_is_fn =
-        \\            loader_info == @field(TypeInfoTag, type_info_fields.@"fn") or
-        \\            loader_info == @field(TypeInfoTag, type_info_fields.pointer) and
-        \\                @typeInfo(@field(loader_info, type_info_fields.pointer).child) ==
-        \\                    @field(TypeInfoTag, type_info_fields.@"fn");
+        \\            loader_info == .@"fn" or
+        \\            loader_info == .pointer and shims.typeInfo(loader_info.pointer.child) == .@"fn";
         \\        if (loader_is_fn) {
         \\            return @as(?PROC, loader(@as([*:0]const u8, prefixed_name)));
         \\        } else {
@@ -781,6 +763,19 @@ fn renderCode(
     try writer.writeAll(
         \\};
         \\
+        \\const shims = struct {
+    );
+    var shims_lines_it = std.mem.splitScalar(u8, @embedFile("shims.zig"), '\n');
+    while (shims_lines_it.next()) |line| {
+        try writer.writeAll("\n");
+        if (line.len != 0) {
+            try writer.writeAll("    ");
+            try writer.writeAll(line);
+        }
+    }
+    try writer.writeAll(
+        \\};
+        \\
         \\test {
         \\    @setEvalBranchQuota(1_000_000);
         \\    std.testing.refAllDeclsRecursive(@This());
@@ -788,23 +783,17 @@ fn renderCode(
         \\
         \\// THIRD-PARTY NOTICES
         \\//
-        \\
     );
     var notices_lines_it = std.mem.splitScalar(u8, @embedFile("THIRD-PARTY-NOTICES.txt"), '\n');
     while (notices_lines_it.next()) |line| {
+        try writer.writeAll("\n//");
         if (line.len != 0) {
-            try writer.print(
-                \\// {s}
-                \\
-            , .{line});
-        } else {
-            try writer.writeAll(
-                \\//
-                \\
-            );
+            try writer.writeAll(" ");
+            try writer.writeAll(line);
         }
     }
     try writer.writeAll(
+        \\
         \\// END OF THIRD-PARTY NOTICES
         \\
     );
@@ -830,7 +819,7 @@ fn formatDeclId(
     }
     try writer.writeAll("@\"");
     try stringEscape(bytes, "", format_options, writer);
-    try writer.writeByte('"');
+    try writer.writeAll("\"");
 }
 
 fn fmtTypeExpr(type_expr: []const registry.Command.Token) std.fmt.Formatter(formatTypeExpr) {
