@@ -1,7 +1,7 @@
 const std = @import("std");
 const builtin = @import("builtin");
 
-const options = @import("zigglgen_options.zig");
+const Options = @import("GeneratorOptions.zig");
 const registry = @import("api_registry.zig");
 const shims = @import("shims.zig");
 
@@ -61,15 +61,15 @@ const ApiVersionProfile = struct {
         const maybe_raw_profile = raw_it.next();
         if (raw_it.next() != null) return error.UnknownExtraField;
 
-        var api: registry.Api.Name = switch (inline for (shims.typeInfo(options.Api).@"enum".fields) |field| {
-            if (std.mem.eql(u8, raw_api, field.name)) break @field(options.Api, field.name);
+        var api: registry.Api.Name = switch (inline for (shims.typeInfo(Options.Api).@"enum".fields) |field| {
+            if (std.mem.eql(u8, raw_api, field.name)) break @field(Options.Api, field.name);
         } else return error.InvalidApi) {
             .gl => .gl,
             .gles => .gles2,
             .glsc => .glsc2,
         };
 
-        const version: [2]u8 = inline for (shims.typeInfo(options.Version).@"enum".fields) |field| {
+        const version: [2]u8 = inline for (shims.typeInfo(Options.Version).@"enum".fields) |field| {
             if (std.mem.eql(u8, raw_version, field.name)) {
                 const dot = std.mem.indexOfScalar(u8, raw_version, '.').?;
                 break .{
@@ -80,8 +80,8 @@ const ApiVersionProfile = struct {
         } else return error.InvalidVersion;
 
         var maybe_profile: ?registry.ProfileName = if (maybe_raw_profile) |raw_profile|
-            switch (inline for (shims.typeInfo(options.Profile).@"enum".fields) |field| {
-                if (std.mem.eql(u8, raw_profile, field.name)) break @field(options.Profile, field.name);
+            switch (inline for (shims.typeInfo(Options.Profile).@"enum".fields) |field| {
+                if (std.mem.eql(u8, raw_profile, field.name)) break @field(Options.Profile, field.name);
             } else return error.InvalidProfile) {
                 .core => .core,
                 .compatibility => .compatibility,
@@ -147,10 +147,10 @@ const ApiVersionProfile = struct {
 };
 
 fn parseExtension(raw: []const u8, api: registry.Api.Name) ParseExtensionError!registry.Extension.Name {
-    // Statically assert that 'zigglgen_options.zig' and 'api_registry.zig' are in sync.
+    // Statically assert that 'api_registry.zig' and 'GeneratorOptions.zig' are in sync.
     comptime {
         @setEvalBranchQuota(100_000);
-        for (shims.typeInfo(options.Extension).@"enum".fields, shims.typeInfo(registry.Extension.Name).@"enum".fields) |a, b| {
+        for (shims.typeInfo(registry.Extension.Name).@"enum".fields, shims.typeInfo(Options.Extension).@"enum".fields) |a, b| {
             std.debug.assert(std.mem.eql(u8, a.name, b.name));
         }
     }

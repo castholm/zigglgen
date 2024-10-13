@@ -3,12 +3,12 @@
     .version = "0.3.0",
     .minimum_zig_version = "0.12.1",
     .paths = .{
+        "GeneratorOptions.zig",
         "LICENSE.md",
         "THIRD-PARTY-NOTICES.txt",
         "api_registry.zig",
         "build.zig",
         "build.zig.zon",
         "zigglgen.zig",
-        "zigglgen_options.zig",
     },
 }

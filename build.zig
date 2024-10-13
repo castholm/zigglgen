@@ -13,25 +13,15 @@ pub fn build(b: *std.Build) void {
     b.installArtifact(zigglgen_exe);
 }
 
-pub const ZigglgenOptions = struct {
-    api: Api,
-    version: Version,
-    profile: ?Profile = null,
-    extensions: []const Extension = &.{},
+pub const GeneratorOptions = @import("GeneratorOptions.zig");
 
-    pub const Api = @import("zigglgen_options.zig").Api;
-    pub const Version = @import("zigglgen_options.zig").Version;
-    pub const Profile = @import("zigglgen_options.zig").Profile;
-    pub const Extension = @import("zigglgen_options.zig").Extension;
-};
-
-pub fn generateBindingsModule(b: *std.Build, options: ZigglgenOptions) *std.Build.Module {
+pub fn generateBindingsModule(b: *std.Build, options: GeneratorOptions) *std.Build.Module {
     return b.createModule(.{
         .root_source_file = generateBindingsSourceFile(b, options),
     });
 }
 
-pub fn generateBindingsSourceFile(b: *std.Build, options: ZigglgenOptions) std.Build.LazyPath {
+pub fn generateBindingsSourceFile(b: *std.Build, options: GeneratorOptions) std.Build.LazyPath {
     const zigglgen_dep = b.dependencyFromBuildZig(@This(), .{});
     const zigglgen_exe = zigglgen_dep.artifact("zigglgen");
     const run_zigglgen = b.addRunArtifact(zigglgen_exe);
