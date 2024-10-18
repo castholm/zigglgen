@@ -10,5 +10,6 @@
         "build.zig",
         "build.zig.zon",
         "zigglgen.zig",
+        "shims.zig",
     },
 }
