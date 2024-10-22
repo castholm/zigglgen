@@ -522,7 +522,7 @@ fn renderCode(
     }
     try writer.writeAll(
         \\
-        \\pub const APIENTRY: std.builtin.CallingConvention = if (builtin.os.tag == .windows and builtin.cpu.arch == .x86) .Stdcall else .C;
+        \\pub const APIENTRY = if (builtin.os.tag == .windows and builtin.cpu.arch == .x86) std.builtin.CallingConvention.Stdcall else std.builtin.CallingConvention.C;
         \\pub const PROC = *align(@alignOf(fn () callconv(APIENTRY) void)) const anyopaque;
         \\
         \\//#region Types
@@ -562,7 +562,7 @@ fn renderCode(
     while (command_it.next()) |command| {
         try writer.print("pub fn {}(", .{std.zig.fmtId(@tagName(command.key))});
         try renderParams(writer, command, false);
-        try writer.writeAll(") ");
+        try writer.writeAll(") callconv(APIENTRY) ");
         try renderReturnType(writer, command);
         try writer.print(" {{\n    return ProcTable.current.?.{p_}", .{std.zig.fmtId(@tagName(command.key))});
         if (!command.value.required) try writer.writeAll(".?");
