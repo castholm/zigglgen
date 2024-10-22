@@ -441,10 +441,13 @@ fn renderCode(
         \\
         \\/// Information about this set of OpenGL bindings.
         \\pub const info = struct {{
-        \\    pub const api = {[api]s};
+        \\    pub const api: Api = {[api]s};
         \\    pub const version_major = {[version_major]d};
         \\    pub const version_minor = {[version_minor]d};
-        \\    pub const profile = {[profile]s};
+        \\    pub const profile: ?Profile = {[profile]s};
+        \\
+        \\    pub const Api = enum {{ gl, gles, glsc }};
+        \\    pub const Profile = enum {{ core, compatibility, common, common_lite }};
         \\}};
         \\
     , .{
