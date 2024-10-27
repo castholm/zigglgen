@@ -54,8 +54,8 @@ pub const std = struct {
     };
 };
 
-pub fn typeInfo(comptime T: type) @This().std.builtin.Type {
-    return if (old_std_builtin_type_field_names) switch (@typeInfo(T)) {
+pub fn typeInfo(comptime Type: type) @This().std.builtin.Type {
+    return if (old_std_builtin_type_field_names) switch (@typeInfo(Type)) {
         .Type => .type,
         .Void => .void,
         .Bool => .bool,
@@ -80,5 +80,5 @@ pub fn typeInfo(comptime T: type) @This().std.builtin.Type {
         .AnyFrame => .@"anyframe",
         .Vector => |x| .{ .vector = x },
         .EnumLiteral => .enum_literal,
-    } else @typeInfo(T);
+    } else @typeInfo(Type);
 }
