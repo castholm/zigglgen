@@ -73,13 +73,13 @@ pub fn main() !void {
  }
 ```
 
-See [`zigglgen-example/`](zigglgen-example/) for a complete example project that creates a window using
-[mach-glfw](https://machengine.org/pkg/mach-glfw/) and draws a triangle to it.
+<!--See [`zigglgen-example/`](zigglgen-example/) for a complete example project that creates a window using
+[mach-glfw](https://machengine.org/pkg/mach-glfw/) and draws a triangle to it.-->
 
 ## API
 
-If you're curious what a generated set of bindings looks like, take a look at
-[`zigglgen-example/gles3.zig`](zigglgen-example/gles3.zig).
+<!--If you're curious what a generated set of bindings looks like, take a look at
+[`zigglgen-example/gles3.zig`](zigglgen-example/gles3.zig).-->
 
 ### OpenGL symbols
 
