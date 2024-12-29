@@ -78,13 +78,12 @@ pub fn main() !void {
  }
 ```
 
-<!--See [`zigglgen-example/`](zigglgen-example/) for a complete example project that creates a window using
-[mach-glfw](https://machengine.org/pkg/mach-glfw/) and draws a triangle to it.-->
+See [castholm/zig-examples](https://github.com/castholm/zig-examples) for some more complete example projects.
 
 ## API
 
-<!--If you're curious what a generated set of bindings looks like, take a look at
-[`zigglgen-example/gles3.zig`](zigglgen-example/gles3.zig).-->
+See [this gist](https://gist.github.com/castholm/a99b650cdd523244b456c7597e321e6e) for a preview of what the generated
+code might look like.
 
 ### OpenGL symbols
 
@@ -221,6 +220,22 @@ ensures that calls to supported extension functions are always safe.
 
 If you use OpenGL extensions it is your responsibility to read the extension specifications carefully and understand
 under which conditions their features are available.
+
+### Why can't I pass my windowing system's `getProcAddress` function to `ProcTable.init`?
+
+It might have the wrong signature, such as taking a `[:0]const u8` (0-terminated slice) instead of a `[*:0]const u8`
+(0-terminated many-pointer), or returning a pointer without an alignment qualifier. To fix this, define your own
+function that wraps the windowing system's function and corrects the mismatch:
+
+```zig
+fn fixedGetProcAddress(prefixed_name: [*:0]const u8) ?gl.PROC {
+    return @alignCast(windowing.getProcAddress(std.mem.span(prefixed_name)));
+}
+
+// ...
+
+if (!gl_procs.init(fixedGetProcAddress)) return error.InitFailed;
+```
 
 ## Contributing
 
