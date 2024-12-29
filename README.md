@@ -1,3 +1,8 @@
+<!--
+© 2024 Carl Åstholm
+SPDX-License-Identifier: MIT
+-->
+
 # zigglgen
 
 The only Zig OpenGL binding generator you need.
@@ -8,7 +13,7 @@ zigglgen currently supports the following versions of the Zig compiler:
 
 - `0.12.1`
 - `0.13.0`
-- master (last tested with `0.14.0-dev.1767+d23db9427`)
+- `0.14.0-dev` (master)
 
 Older or more recent versions of the compiler are not guaranteed to be compatible.
 
@@ -235,6 +240,10 @@ pull request).
 
 ## License
 
-zigglgen is licensed under the [MIT License](LICENSE.md).
+This repository is [REUSE-compliant](https://reuse.software/). The effective SPDX license expression for the repository as a whole is:
 
-See [`THIRD-PARTY-NOTICES.txt`](THIRD-PARTY-NOTICES.txt) for third-party license notices.
+```
+Apache-2.0 AND MIT
+```
+
+Copyright notices and license texts have been reproduced in [`LICENSE.txt`](LICENSE.txt), for your convenience.

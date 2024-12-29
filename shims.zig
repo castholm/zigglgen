@@ -1,3 +1,6 @@
+// © 2024 Carl Åstholm
+// SPDX-License-Identifier: MIT
+
 // Zig 0.14.0-dev changed the names of all 'std.builtin.Type' fields.
 const old_std_builtin_type_field_names = @hasField(@import("std").builtin.Type, "Type");
 
