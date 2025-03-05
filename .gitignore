@@ -2,5 +2,4 @@
 # SPDX-License-Identifier: MIT
 
 .zig-cache/
-zig-cache/
 zig-out/

@@ -2,9 +2,11 @@
 // SPDX-License-Identifier: MIT
 
 .{
-    .name = "zigglgen",
-    .version = "0.3.0",
-    .minimum_zig_version = "0.12.1",
+    .name = .zigglgen,
+    .version = "0.4.0",
+    .fingerprint = 0xf697891b2daa6c6e,
+    .minimum_zig_version = "0.14.0",
+    .dependencies = .{},
     .paths = .{
         "GeneratorOptions.zig",
         "api_registry.zig",

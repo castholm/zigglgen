@@ -11,16 +11,15 @@ The only Zig OpenGL binding generator you need.
 
 zigglgen currently supports the following versions of the Zig compiler:
 
-- `0.12.1`
-- `0.13.0`
-- `0.14.0-dev` (master)
+- `0.14.0`
+- `0.15.0-dev` (master)
 
 Older or more recent versions of the compiler are not guaranteed to be compatible.
 
 1\. Run `zig fetch` to add the zigglgen package to your `build.zig.zon` manifest:
 
 ```sh
-zig fetch --save git+https://github.com/castholm/zigglgen
+zig fetch --save git+https://github.com/castholm/zigglgen.git
 ```
 
 2\. Generate a set of OpenGL bindings in your `build.zig` build script:
@@ -29,7 +28,7 @@ zig fetch --save git+https://github.com/castholm/zigglgen
 const std = @import("std");
 
 pub fn build(b: *std.Build) void {
-    const exe = b.addExecutable(...);
+    const exe_mod = b.createModule(...);
 
     // Choose the OpenGL API, version, profile and extensions you want to generate bindings for.
     const gl_bindings = @import("zigglgen").generateBindingsModule(b, .{
@@ -40,9 +39,7 @@ pub fn build(b: *std.Build) void {
     });
 
     // Import the generated module.
-    exe.root_module.addImport("gl", gl_bindings);
-
-    b.installArtifact(exe);
+    exe_mod.addImport("gl", gl_bindings);
 }
 ```
 
@@ -78,7 +75,7 @@ pub fn main() !void {
  }
 ```
 
-See [castholm/zig-examples](https://github.com/castholm/zig-examples) for some more complete example projects.
+See [castholm/zig-examples](https://github.com/castholm/zig-examples) for example projects.
 
 ## API
 

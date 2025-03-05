@@ -9,9 +9,11 @@ pub fn build(b: *std.Build) void {
 
     const zigglgen_exe = b.addExecutable(.{
         .name = "zigglgen",
-        .root_source_file = b.path("zigglgen.zig"),
-        .target = target,
-        .optimize = optimize,
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("zigglgen.zig"),
+            .target = target,
+            .optimize = optimize,
+        }),
     });
     b.installArtifact(zigglgen_exe);
 
