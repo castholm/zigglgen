@@ -263,22 +263,7 @@ fn resolveQuery(
     constants: *ResolvedConstants,
     commands: *ResolvedCommands,
 ) void {
-    // Add API features
-    for (registry.apis) |reg_api| {
-        if (reg_api.name != api) continue;
-        if (reg_api.version[0] > version[0] or reg_api.version[0] == version[0] and reg_api.version[1] > version[1]) continue;
-        for (reg_api.add) |feature| {
-            std.debug.assert(feature.api == null);
-            if (feature.profile != null and feature.profile != profile) continue;
-            switch (feature.name) {
-                .type => |name| _ = tryPutType(types, name),
-                .constant => |name| _ = tryPutConstant(constants, name, api),
-                .command => |name| _ = tryPutCommand(commands, name, true),
-            }
-        }
-    }
-
-    // Remove API features
+    // Add/remove API features
     for (registry.apis) |reg_api| {
         if (reg_api.name != api) continue;
         if (reg_api.version[0] > version[0] or reg_api.version[0] == version[0] and reg_api.version[1] > version[1]) continue;
@@ -289,6 +274,15 @@ fn resolveQuery(
                 .type => |name| types.remove(name),
                 .constant => |name| constants.remove(name),
                 .command => |name| commands.remove(name),
+            }
+        }
+        for (reg_api.add) |feature| {
+            std.debug.assert(feature.api == null);
+            if (feature.profile != null and feature.profile != profile) continue;
+            switch (feature.name) {
+                .type => |name| _ = tryPutType(types, name),
+                .constant => |name| _ = tryPutConstant(constants, name, api),
+                .command => |name| _ = tryPutCommand(commands, name, true),
             }
         }
     }
