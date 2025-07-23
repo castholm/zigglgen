@@ -25,15 +25,17 @@ pub fn build(b: *std.Build) void {
     run_step.dependOn(&run_zigglgen.step);
 
     const zigglgen_tests = b.addTest(.{
-        .root_source_file = generate_everything: {
-            const r = b.addRunArtifact(zigglgen_exe);
-            r.addArgs(&.{ "gl-4.6-core", "ZIGGLGEN_everything" });
-            const output = r.captureStdOut();
-            r.captured_stdout.?.basename = "gl.zig";
-            break :generate_everything output;
-        },
-        .target = target,
-        .optimize = optimize,
+        .root_module = b.createModule(.{
+            .target = target,
+            .optimize = optimize,
+            .root_source_file = generate_everything: {
+                const r = b.addRunArtifact(zigglgen_exe);
+                r.addArgs(&.{ "gl-4.6-core", "ZIGGLGEN_everything" });
+                const output = r.captureStdOut();
+                r.captured_stdout.?.basename = "gl.zig";
+                break :generate_everything output;
+            },
+        }),
     });
 
     const run_tests = b.addRunArtifact(zigglgen_tests);

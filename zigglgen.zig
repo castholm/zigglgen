@@ -43,12 +43,7 @@ pub fn main() !void {
     else
         resolveQuery(api, version, profile, &extensions, &types, &constants, &commands);
 
-    var stdout_state = std.io.bufferedWriter(std.io.getStdOut().writer());
-    const stdout = stdout_state.writer();
-
-    try renderCode(stdout, api, version, profile, &extensions, &types, &constants, &commands);
-
-    try stdout_state.flush();
+    try renderCode(api, version, profile, &extensions, &types, &constants, &commands);
 }
 
 const ApiVersionProfile = struct {
@@ -384,7 +379,6 @@ fn resolveEverything(
 }
 
 fn renderCode(
-    writer: anytype,
     api: registry.Api.Name,
     version: [2]u8,
     profile: ?registry.ProfileName,
@@ -394,6 +388,9 @@ fn renderCode(
     commands: *ResolvedCommands,
 ) !void {
     const any_extensions = extensions.count() != 0;
+
+    var writer_file = std.fs.File.stdout().writer(&.{});
+    var writer = &writer_file.interface;
 
     try writer.print("" ++
         // REUSE-IgnoreStart
@@ -513,7 +510,7 @@ fn renderCode(
         var extension_it = extensions.iterator();
         while (extension_it.next()) |extension| {
             try writer.print(
-                \\    {p},
+                \\    {f},
                 \\
             , .{std.zig.fmtId(@tagName(extension.key))});
         }
@@ -524,7 +521,7 @@ fn renderCode(
     }
     try writer.writeAll(
         \\
-        \\pub const APIENTRY = if (builtin.os.tag == .windows and builtin.cpu.arch == .x86) std.builtin.CallingConvention.Stdcall else std.builtin.CallingConvention.C;
+        \\pub const APIENTRY = if (builtin.os.tag == .windows and builtin.cpu.arch == .x86) std.builtin.CallingConvention.Stdcall else std.builtin.CallingConvention.c;
         \\pub const PROC = *align(@alignOf(fn () callconv(APIENTRY) void)) const anyopaque;
         \\
         \\//#region Types
@@ -537,7 +534,7 @@ fn renderCode(
             else => {},
         }
         try writer.print(
-            \\pub const {} = {s};
+            \\pub const {f} = {s};
             \\
         , .{ std.zig.fmtId(@tagName(@"type".key)), getTypeValue(@"type".key) });
     }
@@ -550,7 +547,7 @@ fn renderCode(
     var constant_it = constants.iterator();
     while (constant_it.next()) |constant| {
         try writer.print(
-            \\pub const {} = {s}0x{X};
+            \\pub const {f} = {s}0x{X};
             \\
         , .{ std.zig.fmtId(@tagName(constant.key)), if (constant.value.value < 0) "-" else "", @abs(constant.value.value) });
     }
@@ -562,11 +559,11 @@ fn renderCode(
     );
     var command_it = commands.iterator();
     while (command_it.next()) |command| {
-        try writer.print("pub fn {}(", .{std.zig.fmtId(@tagName(command.key))});
+        try writer.print("pub fn {f}(", .{std.zig.fmtId(@tagName(command.key))});
         try renderParams(writer, command, false);
         try writer.writeAll(") callconv(APIENTRY) ");
         try renderReturnType(writer, command);
-        try writer.print(" {{\n    return ProcTable.current.?.{p_}", .{std.zig.fmtId(@tagName(command.key))});
+        try writer.print(" {{\n    return ProcTable.current.?.{f}", .{std.zig.fmtId(@tagName(command.key))});
         if (!command.value.required) try writer.writeAll(".?");
         try writer.writeAll("(");
         try renderParams(writer, command, true);
@@ -588,14 +585,14 @@ fn renderCode(
         var extension_it = extensions.iterator();
         while (extension_it.next()) |extension| {
             try writer.print(
-                \\    {p_}: bool,
+                \\    {f}: bool,
                 \\
             , .{std.zig.fmtId(@tagName(extension.key))});
         }
     }
     command_it = commands.iterator();
     while (command_it.next()) |command| {
-        try writer.print("    {p_}: ", .{std.zig.fmtId(@tagName(command.key))});
+        try writer.print("    {f}: ", .{std.zig.fmtId(@tagName(command.key))});
         if (!command.value.required) try writer.writeAll("?");
         try writer.writeAll("*const fn (");
         try renderParams(writer, command, false);
@@ -776,15 +773,13 @@ fn renderCode(
     );
 }
 
-fn fmtTypeExpr(type_expr: []const registry.Command.Token) std.fmt.Formatter(formatTypeExpr) {
+fn fmtTypeExpr(type_expr: []const registry.Command.Token) std.fmt.Alt(@TypeOf(type_expr), formatTypeExpr) {
     return .{ .data = type_expr };
 }
 
 fn formatTypeExpr(
     type_expr: []const registry.Command.Token,
-    comptime _: []const u8,
-    _: std.fmt.FormatOptions,
-    writer: anytype,
+    writer: *std.Io.Writer,
 ) !void {
     if (type_expr.len == 1 and type_expr[0] == .void) {
         return writer.writeAll("void");
@@ -802,7 +797,7 @@ fn formatTypeExpr(
             );
         },
         .@"const" => try writer.writeAll("const "),
-        .type => |@"type"| try writer.print("{}", .{std.zig.fmtId(@tagName(@"type"))}),
+        .type => |@"type"| try writer.print("{f}", .{std.zig.fmtId(@tagName(@"type"))}),
     };
 }
 
@@ -878,14 +873,14 @@ fn renderParams(writer: anytype, command: ResolvedCommands.Entry, comptime name_
     for (command.value.params, 0..) |param, param_index| {
         if (param_index != 0) try writer.writeAll(", ");
         if (paramOverride(command.key, param_index)) |override| {
-            try writer.print("{}", .{std.zig.fmtId(override.name)});
+            try writer.print("{f}", .{std.zig.fmtId(override.name)});
             if (!name_only) {
                 try writer.print(": {s}", .{override.type_expr});
             }
         } else {
-            try writer.print("{}", .{std.zig.fmtId(param.name)});
+            try writer.print("{f}", .{std.zig.fmtId(param.name)});
             if (!name_only) {
-                try writer.print(": {}", .{fmtTypeExpr(param.type_expr)});
+                try writer.print(": {f}", .{fmtTypeExpr(param.type_expr)});
             }
         }
     }
@@ -1237,7 +1232,7 @@ fn renderReturnType(writer: anytype, command: ResolvedCommands.Entry) !void {
     if (returnTypeOverride(command.key)) |override| {
         try writer.writeAll(override.type_expr);
     } else {
-        try formatTypeExpr(command.value.return_type_expr, "", .{}, writer);
+        try formatTypeExpr(command.value.return_type_expr, writer);
     }
 }
 
