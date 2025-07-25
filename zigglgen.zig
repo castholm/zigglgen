@@ -7,6 +7,8 @@ const builtin = @import("builtin");
 const Options = @import("GeneratorOptions.zig");
 const registry = @import("api_registry.zig");
 
+const post_writergate = @hasDecl(std, "Io"); // TODO: Remove after 0.15 (also audit std.Io.Writer code)
+
 /// Usage: `zigglen <api>-<version>[-<profile>] [<extension> ...]`
 pub fn main() !void {
     var arena_state = std.heap.ArenaAllocator.init(std.heap.page_allocator);
@@ -43,7 +45,10 @@ pub fn main() !void {
     else
         resolveQuery(api, version, profile, &extensions, &types, &constants, &commands);
 
-    var stdout_state = std.io.bufferedWriter(std.io.getStdOut().writer());
+    var stdout_state = if (post_writergate)
+        std.Io.bufferedWriter(std.fs.File.stdout().deprecatedWriter())
+    else
+        std.io.bufferedWriter(std.io.getStdOut().writer());
     const stdout = stdout_state.writer();
 
     try renderCode(stdout, api, version, profile, &extensions, &types, &constants, &commands);
@@ -513,9 +518,9 @@ fn renderCode(
         var extension_it = extensions.iterator();
         while (extension_it.next()) |extension| {
             try writer.print(
-                \\    {p},
+                \\    {f},
                 \\
-            , .{std.zig.fmtId(@tagName(extension.key))});
+            , .{fmtIdFlags(@tagName(extension.key), .{ .allow_primitive = true })});
         }
         try writer.writeAll(
             \\};
@@ -524,7 +529,7 @@ fn renderCode(
     }
     try writer.writeAll(
         \\
-        \\pub const APIENTRY = if (builtin.os.tag == .windows and builtin.cpu.arch == .x86) std.builtin.CallingConvention.Stdcall else std.builtin.CallingConvention.C;
+        \\pub const APIENTRY: std.builtin.CallingConvention = if (builtin.os.tag == .windows) .winapi else .c;
         \\pub const PROC = *align(@alignOf(fn () callconv(APIENTRY) void)) const anyopaque;
         \\
         \\//#region Types
@@ -537,9 +542,9 @@ fn renderCode(
             else => {},
         }
         try writer.print(
-            \\pub const {} = {s};
+            \\pub const {f} = {s};
             \\
-        , .{ std.zig.fmtId(@tagName(@"type".key)), getTypeValue(@"type".key) });
+        , .{ fmtIdFlags(@tagName(@"type".key), .{}), getTypeValue(@"type".key) });
     }
     try writer.writeAll(
         \\//#endregion Types
@@ -550,9 +555,9 @@ fn renderCode(
     var constant_it = constants.iterator();
     while (constant_it.next()) |constant| {
         try writer.print(
-            \\pub const {} = {s}0x{X};
+            \\pub const {f} = {s}0x{X};
             \\
-        , .{ std.zig.fmtId(@tagName(constant.key)), if (constant.value.value < 0) "-" else "", @abs(constant.value.value) });
+        , .{ fmtIdFlags(@tagName(constant.key), .{}), if (constant.value.value < 0) "-" else "", @abs(constant.value.value) });
     }
     try writer.writeAll(
         \\//#endregion Constants
@@ -562,11 +567,11 @@ fn renderCode(
     );
     var command_it = commands.iterator();
     while (command_it.next()) |command| {
-        try writer.print("pub fn {}(", .{std.zig.fmtId(@tagName(command.key))});
+        try writer.print("pub fn {f}(", .{fmtIdFlags(@tagName(command.key), .{})});
         try renderParams(writer, command, false);
         try writer.writeAll(") callconv(APIENTRY) ");
         try renderReturnType(writer, command);
-        try writer.print(" {{\n    return ProcTable.current.?.{p_}", .{std.zig.fmtId(@tagName(command.key))});
+        try writer.print(" {{\n    return ProcTable.current.?.{f}", .{fmtIdFlags(@tagName(command.key), .{ .allow_primitive = true, .allow_underscore = true })});
         if (!command.value.required) try writer.writeAll(".?");
         try writer.writeAll("(");
         try renderParams(writer, command, true);
@@ -588,14 +593,14 @@ fn renderCode(
         var extension_it = extensions.iterator();
         while (extension_it.next()) |extension| {
             try writer.print(
-                \\    {p_}: bool,
+                \\    {f}: bool,
                 \\
-            , .{std.zig.fmtId(@tagName(extension.key))});
+            , .{fmtIdFlags(@tagName(extension.key), .{ .allow_primitive = true, .allow_underscore = true })});
         }
     }
     command_it = commands.iterator();
     while (command_it.next()) |command| {
-        try writer.print("    {p_}: ", .{std.zig.fmtId(@tagName(command.key))});
+        try writer.print("    {f}: ", .{fmtIdFlags(@tagName(command.key), .{ .allow_primitive = true, .allow_underscore = true })});
         if (!command.value.required) try writer.writeAll("?");
         try writer.writeAll("*const fn (");
         try renderParams(writer, command, false);
@@ -776,11 +781,73 @@ fn renderCode(
     );
 }
 
-fn fmtTypeExpr(type_expr: []const registry.Command.Token) std.fmt.Formatter(formatTypeExpr) {
+const fmtIdFlags = if (post_writergate) std.zig.fmtIdFlags else fmtIdFlagsPreWritergate;
+
+fn fmtIdFlagsPreWritergate(bytes: []const u8, flags: FormatIdFlags) std.fmt.Formatter(formatIdFlagsPreWritergate) {
+    return .{ .data = .{ .bytes = bytes, .flags = flags } };
+}
+
+const FormatIdFlags = struct {
+    allow_primitive: bool = false,
+    allow_underscore: bool = false,
+};
+
+fn formatIdFlagsPreWritergate(
+    ctx: struct {
+        bytes: []const u8,
+        flags: FormatIdFlags,
+    },
+    comptime _: []const u8,
+    _: std.fmt.FormatOptions,
+    writer: anytype,
+) !void {
+    const bytes = ctx.bytes;
+    if (std.zig.isValidId(bytes) and
+        (ctx.flags.allow_primitive or !std.zig.isPrimitive(bytes)) and
+        (ctx.flags.allow_underscore or !std.zig.isUnderscore(bytes)))
+    {
+        return writer.writeAll(bytes);
+    }
+    try writer.writeAll("@\"");
+    try std.zig.stringEscape(bytes, "", .{}, writer);
+    try writer.writeByte('"');
+}
+
+const fmtTypeExpr = if (post_writergate) fmtTypeExprPostWritergate else fmtTypeExprPreWritergate;
+
+fn fmtTypeExprPostWritergate(type_expr: []const registry.Command.Token) std.fmt.Alt([]const registry.Command.Token, formatTypeExprPostWritergate) {
     return .{ .data = type_expr };
 }
 
-fn formatTypeExpr(
+fn formatTypeExprPostWritergate(
+    type_expr: []const registry.Command.Token,
+    writer: *std.Io.Writer,
+) !void {
+    if (type_expr.len == 1 and type_expr[0] == .void) {
+        return writer.writeAll("void");
+    }
+    for (type_expr, 0..) |token, token_index| switch (token) {
+        .void => try writer.writeAll("anyopaque"),
+        .@"*" => {
+            try writer.writeAll(
+                if (type_expr[type_expr.len - 1] == .void and for (type_expr[(token_index + 1)..]) |future_token| {
+                    if (future_token == .@"*") break false;
+                } else true)
+                    "?*"
+                else
+                    "[*c]",
+            );
+        },
+        .@"const" => try writer.writeAll("const "),
+        .type => |@"type"| try writer.print("{f}", .{std.zig.fmtId(@tagName(@"type"))}),
+    };
+}
+
+fn fmtTypeExprPreWritergate(type_expr: []const registry.Command.Token) std.fmt.Formatter(formatTypeExprPreWritergate) {
+    return .{ .data = type_expr };
+}
+
+fn formatTypeExprPreWritergate(
     type_expr: []const registry.Command.Token,
     comptime _: []const u8,
     _: std.fmt.FormatOptions,
@@ -878,14 +945,14 @@ fn renderParams(writer: anytype, command: ResolvedCommands.Entry, comptime name_
     for (command.value.params, 0..) |param, param_index| {
         if (param_index != 0) try writer.writeAll(", ");
         if (paramOverride(command.key, param_index)) |override| {
-            try writer.print("{}", .{std.zig.fmtId(override.name)});
+            try writer.print("{f}", .{fmtIdFlags(override.name, .{})});
             if (!name_only) {
                 try writer.print(": {s}", .{override.type_expr});
             }
         } else {
-            try writer.print("{}", .{std.zig.fmtId(param.name)});
+            try writer.print("{f}", .{fmtIdFlags(param.name, .{})});
             if (!name_only) {
-                try writer.print(": {}", .{fmtTypeExpr(param.type_expr)});
+                try writer.print(": {f}", .{fmtTypeExpr(param.type_expr)});
             }
         }
     }
@@ -1237,7 +1304,7 @@ fn renderReturnType(writer: anytype, command: ResolvedCommands.Entry) !void {
     if (returnTypeOverride(command.key)) |override| {
         try writer.writeAll(override.type_expr);
     } else {
-        try formatTypeExpr(command.value.return_type_expr, "", .{}, writer);
+        try writer.print("{f}", .{fmtTypeExpr(command.value.return_type_expr)});
     }
 }
 
