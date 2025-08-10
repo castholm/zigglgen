@@ -45,15 +45,18 @@ pub fn main() !void {
     else
         resolveQuery(api, version, profile, &extensions, &types, &constants, &commands);
 
-    var stdout_state = if (post_writergate)
-        std.Io.bufferedWriter(std.fs.File.stdout().deprecatedWriter())
-    else
-        std.io.bufferedWriter(std.io.getStdOut().writer());
-    const stdout = stdout_state.writer();
-
-    try renderCode(stdout, api, version, profile, &extensions, &types, &constants, &commands);
-
-    try stdout_state.flush();
+    if (post_writergate) {
+        var stdout_buffer: [4096]u8 = undefined;
+        var stdout_writer = std.fs.File.stdout().writer(&stdout_buffer);
+        const stdout = &stdout_writer.interface;
+        try renderCode(stdout, api, version, profile, &extensions, &types, &constants, &commands);
+        try stdout.flush();
+    } else {
+        var bw = std.io.bufferedWriter(std.io.getStdOut().writer());
+        const stdout = bw.writer();
+        try renderCode(stdout, api, version, profile, &extensions, &types, &constants, &commands);
+        try bw.flush();
+    }
 }
 
 const ApiVersionProfile = struct {
