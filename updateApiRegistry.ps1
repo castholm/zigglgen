@@ -410,26 +410,23 @@ function commandSortKey ([string] $str) {
 (?x)
 \A
 (?<base>.+?)
+(?<arity>(?<![0-9])[1234](?:x[1234])?)?
 (?<type>
     b(?<!Attrib)|
-    s(?<!Access|Address|Arrays|Bias|Bindless|Bounds|Buffers|Commands|Controls|Coords|Cores|Counters|Elements|Feedbacks|Fences|Framebuffers|Glyphs|Groups|Indices|Instruments|Layers|Levels|Lists|Maps|Markers|Metrics|Monitors|Names|Objects|Ops|Parameters|Paths|Pipelines|Pixels|Points|Programs|Queries|Rates|Rectangles|Regions|Renderbuffers|Samplers|Samples|Segments|Semaphores|Shaders|Stages|States|Status|Surfaces|Symbols|Tasks|Textures|Threads|Triangles|Values|Varyings)|
+    d(?<!Advanced|Blend|Coord|Enabled|End|Fixed|Indexed|Keyed)|
+    f|
+    h(?<!Depth|Finish|Flush|Length|Path|Push|Through|Width)|
     i(?<!Bufferfi|Disablei|Enablei|Equationi|Fini|Framebufferfi|Funci|Maski|Separatei|Statei|Stringi)|
     i64|
+    s(?<!Access|Address|Arrays|Bias|Bindless|Bounds|Buffers|Commands|Controls|Coords|Cores|Counters|Elements|Feedbacks|Fences|Framebuffers|Glyphs|Groups|Indices|Instruments|Layers|Levels|Lists|Maps|Markers|Metrics|Monitors|Names|Objects|Ops|Parameters|Paths|Pipelines|Pixels|Points|Programs|Queries|Rates|Rectangles|Regions|Renderbuffers|Samplers|Samples|Segments|Semaphores|Shaders|Stages|States|Status|Surfaces|Symbols|Tasks|Textures|Threads|Triangles|Values|Varyings)|
     ub|
-    us(?<!Status)|
     ui|
     ui64|
-    x(?<!Box|Index|Matrix|Tex|Vertex)|
-    h(?<!Depth|Finish|Flush|Length|Path|Push|Through|Width)|
-    f|
-    fi|
-    d(?<!Advanced|Blend|Coord|Enabled|End|Fixed|Indexed|Keyed)
+    us(?<!Status)|
+    x(?<!Box|Index|Matrix|Tex|Vertex)
 )?
-(?<array>
-    i(?<!Bufferfi|Fini|Framebufferfi)|
-    v|
-    i_v
-)?
+(?<indexed>i(?<!Bufferfi|Fini|Framebufferfi)|i_v)?
+(?<vector>v(?<!Env))?
 (?<extension>3DFX|AMD|ANDROID|ANGLE|APPLE|ARB|ARM|ATI|DMP|EXT|FJ|GREMEDY|HP|IBM|IMG|INGR|INTEL|KHR|MESA|MESAX|NV|NVX|OES|OML|OVR|PGI|QCOM|REND|S3|SGI|SGIS|SGIX|SUN|SUNX|VIV|WIN)?
 \z
 "@
@@ -440,10 +437,10 @@ function commandSortKey ([string] $str) {
                 (
                     $_ -csplit '(?<=[a-z])(?=[A-Z0-9])|(?<=[A-Z0-9])(?=[A-Z][a-z])'
                     | ForEach-Object { basicSortKey $_ }
-                ) -join '004'
+                ) -join '006'
             }
-        ) -join '003'
-    ) + "000$(basicSortKey $Matches.type)001$(basicSortKey $Matches.array)002$(basicSortKey $Matches.extension)"
+        ) -join '005'
+    ) + "000$(basicSortKey $Matches.arity)001$(basicSortKey $Matches.type)002$(basicSortKey $Matches.indexed)003$(basicSortKey $Matches.vector)004$(basicSortKey $Matches.extension)"
 }
 
 function extensionSortKey([string] $str) {

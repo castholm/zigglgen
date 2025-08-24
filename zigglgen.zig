@@ -547,7 +547,7 @@ fn renderCode(
         try writer.print(
             \\pub const {f} = {s};
             \\
-        , .{ fmtIdFlags(@tagName(@"type".key), .{}), getTypeValue(@"type".key) });
+        , .{ fmtIdFlags(@tagName(@"type".key), .{}), getTypeString(@"type".key) });
     }
     try writer.writeAll(
         \\//#endregion Types
@@ -876,69 +876,83 @@ fn formatTypeExprPreWritergate(
     };
 }
 
-fn getTypeValue(@"type": registry.Type.Name) []const u8 {
+fn getTypeString(@"type": registry.Type.Name) []const u8 {
     return switch (@"type") {
         .DEBUGPROC,
-        .DEBUGPROCARB,
-        .DEBUGPROCKHR,
         => "*const fn (source: @\"enum\", @\"type\": @\"enum\", id: uint, severity: @\"enum\", length: sizei, message: [*:0]const char, userParam: ?*const anyopaque) callconv(APIENTRY) void",
         .DEBUGPROCAMD,
         => "*const fn (id: uint, category: @\"enum\", severity: @\"enum\", length: sizei, message: [*:0]const char, userParam: ?*anyopaque) callconv(APIENTRY) void",
+        .DEBUGPROCARB,
+        .DEBUGPROCKHR,
+        => "*const fn (source: @\"enum\", @\"type\": @\"enum\", id: uint, severity: @\"enum\", length: sizei, message: [*:0]const char, userParam: ?*const anyopaque) callconv(APIENTRY) void",
         .VULKANPROCNV,
         => "*const fn () callconv(APIENTRY) void",
         .bitfield,
-        .@"enum",
-        .uint,
         => "c_uint",
         .boolean,
-        .char,
-        .charARB,
-        .ubyte,
         => "u8",
         .byte,
         => "i8",
+        .char,
+        .charARB,
+        => "u8",
         .cl_context,
         .cl_event,
-        .eglClientBufferEXT,
-        .eglImageOES,
-        .sync,
         => "*opaque {}",
         .clampd,
-        .double,
         => "f64",
         .clampf,
-        .float,
         => "f32",
         .clampx,
+        => "i32",
+        .double,
+        => "f64",
+        .eglClientBufferEXT,
+        .eglImageOES,
+        => "*opaque {}",
+        .@"enum",
+        => "c_uint",
         .fixed,
         => "i32",
+        .float,
+        => "f32",
         .half,
         .halfARB,
-        .ushort,
         => "u16",
         .halfNV,
         => "c_ushort",
         .handleARB,
         => "if (builtin.os.tag.isDarwin()) *allowzero anyopaque else u32",
         .int,
-        .sizei,
         => "c_int",
         .int64,
         .int64EXT,
         => "i64",
         .intptr,
         .intptrARB,
+        => "isize",
+        .khrplatform,
+        => unreachable,
+        .short,
+        => "i16",
+        .sizei,
+        => "c_int",
         .sizeiptr,
         .sizeiptrARB,
         => "isize",
-        .short,
-        => "i16",
+        .sync,
+        => "*opaque {}",
+        .ubyte,
+        => "u8",
+        .uint,
+        => "c_uint",
         .uint64,
         .uint64EXT,
         => "u64",
+        .ushort,
+        => "u16",
         .vdpauSurfaceNV,
         => "intptr",
-        .khrplatform,
         .void,
         => unreachable,
     };
@@ -948,9 +962,10 @@ fn renderParams(writer: anytype, command: ResolvedCommands.Entry, comptime name_
     for (command.value.params, 0..) |param, param_index| {
         if (param_index != 0) try writer.writeAll(", ");
         if (paramOverride(command.key, param_index)) |override| {
-            try writer.print("{f}", .{fmtIdFlags(override.name, .{})});
+            const override_name, const override_type_string = override;
+            try writer.print("{f}", .{fmtIdFlags(override_name, .{})});
             if (!name_only) {
-                try writer.print(": {s}", .{override.type_expr});
+                try writer.print(": {s}", .{override_type_string});
             }
         } else {
             try writer.print("{f}", .{fmtIdFlags(param.name, .{})});
@@ -961,176 +976,163 @@ fn renderParams(writer: anytype, command: ResolvedCommands.Entry, comptime name_
     }
 }
 
-fn paramOverride(command: registry.Command.Name, param_index: usize) ?struct {
-    name: []const u8,
-    type_expr: []const u8,
-} {
+fn paramOverride(command: registry.Command.Name, param_index: usize) ?struct { []const u8, []const u8 } {
     return switch (command) {
+        .BindAttribLocation,
+        => switch (param_index) {
+            2 => .{ "name", "[*:0]const char" },
+            else => null,
+        },
+        .BindAttribLocationARB,
+        => switch (param_index) {
+            2 => .{ "name", "[*:0]const charARB" },
+            else => null,
+        },
         .BufferData,
         .BufferDataARB,
         => switch (param_index) {
-            2 => .{ .name = "data", .type_expr = "?*const anyopaque" },
+            2 => .{ "data", "?*const anyopaque" },
             else => null,
         },
         .BufferStorageExternalEXT,
-        .NamedBufferStorageExternalEXT,
         => switch (param_index) {
-            3 => .{ .name = "clientBuffer", .type_expr = "eglClientBufferEXT" },
+            3 => .{ "clientBuffer", "eglClientBufferEXT" },
             else => null,
         },
-        inline .ClearBufferfv,
+        .ClearBufferfv,
+        => switch (param_index) {
+            2 => .{ "values", "[*]const float" },
+            else => null,
+        },
         .ClearBufferiv,
-        .ClearBufferuiv,
-        => |tag| switch (param_index) {
-            2 => .{
-                .name = "values",
-                .type_expr = "[*]const " ++ switch (tag) {
-                    .ClearBufferfv => "float",
-                    .ClearBufferiv => "int",
-                    .ClearBufferuiv => "uint",
-                    else => comptime unreachable,
-                },
-            },
+        => switch (param_index) {
+            2 => .{ "values", "[*]const int" },
             else => null,
         },
-        inline .ClearNamedFramebufferfv,
+        .ClearBufferuiv,
+        => switch (param_index) {
+            2 => .{ "values", "[*]const uint" },
+            else => null,
+        },
+        .ClearNamedFramebufferfv,
+        => switch (param_index) {
+            3 => .{ "values", "[*]const float" },
+            else => null,
+        },
         .ClearNamedFramebufferiv,
+        => switch (param_index) {
+            3 => .{ "values", "[*]const int" },
+            else => null,
+        },
         .ClearNamedFramebufferuiv,
-        => |tag| switch (param_index) {
-            3 => .{
-                .name = "values",
-                .type_expr = "[*]const " ++ switch (tag) {
-                    .ClearNamedFramebufferfv => "float",
-                    .ClearNamedFramebufferiv => "int",
-                    .ClearNamedFramebufferuiv => "uint",
-                    else => comptime unreachable,
-                },
-            },
+        => switch (param_index) {
+            3 => .{ "values", "[*]const uint" },
             else => null,
         },
         .ClientWaitSync,
         .ClientWaitSyncAPPLE,
-        .GetSynciv,
-        .GetSyncivAPPLE,
-        .WaitSync,
-        .WaitSyncAPPLE,
         => switch (param_index) {
-            0 => .{ .name = "sync_", .type_expr = "sync" },
+            0 => .{ "sync_", "sync" },
             else => null,
         },
         .CreateSyncFromCLeventARB,
         => switch (param_index) {
-            0 => .{ .name = "context", .type_expr = "cl_context" },
-            1 => .{ .name = "event", .type_expr = "cl_event" },
+            0 => .{ "context", "cl_context" },
+            1 => .{ "event", "cl_event" },
             else => null,
         },
-        inline .DebugMessageCallback,
+        .DebugMessageCallback,
+        => switch (param_index) {
+            0 => .{ "callback", "?DEBUGPROC" },
+            else => null,
+        },
         .DebugMessageCallbackAMD,
+        => switch (param_index) {
+            0 => .{ "callback", "?DEBUGPROCAMD" },
+            else => null,
+        },
         .DebugMessageCallbackARB,
+        => switch (param_index) {
+            0 => .{ "callback", "?DEBUGPROCARB" },
+            else => null,
+        },
         .DebugMessageCallbackKHR,
-        => |tag| switch (param_index) {
-            0 => .{
-                .name = "callback",
-                .type_expr = "?" ++ switch (tag) {
-                    .DebugMessageCallbackAMD => "DEBUGPROCAMD",
-                    .DebugMessageCallbackARB => "DEBUGPROCARB",
-                    .DebugMessageCallbackKHR => "DEBUGPROCKHR",
-                    else => "DEBUGPROC",
-                },
-            },
+        => switch (param_index) {
+            0 => .{ "callback", "?DEBUGPROCKHR" },
             else => null,
         },
         .DeleteBuffers,
         .DeleteBuffersARB,
-        .GenBuffers,
-        .GenBuffersARB,
         => switch (param_index) {
-            1 => .{ .name = "buffers", .type_expr = "[*]uint" },
+            1 => .{ "buffers", "[*]const uint" },
             else => null,
         },
         .DeleteFramebuffers,
         .DeleteFramebuffersEXT,
         .DeleteFramebuffersOES,
-        .GenFramebuffers,
-        .GenFramebuffersEXT,
-        .GenFramebuffersOES,
         => switch (param_index) {
-            1 => .{ .name = "framebuffers", .type_expr = "[*]uint" },
+            1 => .{ "framebuffers", "[*]const uint" },
             else => null,
         },
         .DeleteProgramPipelines,
         .DeleteProgramPipelinesEXT,
-        .GenProgramPipelines,
-        .GenProgramPipelinesEXT,
         => switch (param_index) {
-            1 => .{ .name = "pipelines", .type_expr = "[*]uint" },
+            1 => .{ "pipelines", "[*]const uint" },
             else => null,
         },
         .DeleteProgramsARB,
         .DeleteProgramsNV,
         => switch (param_index) {
-            1 => .{ .name = "programs", .type_expr = "[*]uint" },
+            1 => .{ "programs", "[*]const uint" },
             else => null,
         },
         .DeleteQueries,
         .DeleteQueriesARB,
         .DeleteQueriesEXT,
-        .DeleteTransformFeedbacks,
-        .DeleteTransformFeedbacksNV,
-        .GenQueries,
-        .GenQueriesARB,
-        .GenQueriesEXT,
-        .GenTransformFeedbacks,
-        .GenTransformFeedbacksNV,
         => switch (param_index) {
-            1 => .{ .name = "ids", .type_expr = "[*]uint" },
+            1 => .{ "ids", "[*]const uint" },
             else => null,
         },
         .DeleteRenderbuffers,
         .DeleteRenderbuffersEXT,
         .DeleteRenderbuffersOES,
-        .GenRenderbuffers,
-        .GenRenderbuffersEXT,
-        .GenRenderbuffersOES,
         => switch (param_index) {
-            1 => .{ .name = "renderbuffers", .type_expr = "[*]uint" },
+            1 => .{ "renderbuffers", "[*]const uint" },
             else => null,
         },
         .DeleteSamplers,
-        .GenSamplers,
         => switch (param_index) {
-            1 => .{ .name = "samplers", .type_expr = "[*]uint" },
+            1 => .{ "samplers", "[*]const uint" },
             else => null,
         },
         .DeleteSync,
         .DeleteSyncAPPLE,
-        .IsSync,
-        .IsSyncAPPLE,
         => switch (param_index) {
-            0 => .{ .name = "sync_", .type_expr = "?sync" },
+            0 => .{ "sync_", "?sync" },
             else => null,
         },
         .DeleteTextures,
         .DeleteTexturesEXT,
-        .GenTextures,
-        .GenTexturesEXT,
         => switch (param_index) {
-            1 => .{ .name = "textures", .type_expr = "[*]uint" },
+            1 => .{ "textures", "[*]const uint" },
+            else => null,
+        },
+        .DeleteTransformFeedbacks,
+        .DeleteTransformFeedbacksNV,
+        => switch (param_index) {
+            1 => .{ "ids", "[*]const uint" },
             else => null,
         },
         .DeleteVertexArrays,
         .DeleteVertexArraysAPPLE,
         .DeleteVertexArraysOES,
-        .GenVertexArrays,
-        .GenVertexArraysAPPLE,
-        .GenVertexArraysOES,
         => switch (param_index) {
-            1 => .{ .name = "arrays", .type_expr = "[*]uint" },
+            1 => .{ "arrays", "[*]const uint" },
             else => null,
         },
         .DrawElements,
         => switch (param_index) {
-            3 => .{ .name = "indices", .type_expr = "usize" },
+            3 => .{ "indices", "usize" },
             else => null,
         },
         .EGLImageTargetRenderbufferStorageOES,
@@ -1138,165 +1140,294 @@ fn paramOverride(command: registry.Command.Name, param_index: usize) ?struct {
         .EGLImageTargetTexture2DOES,
         .EGLImageTargetTextureStorageEXT,
         => switch (param_index) {
-            1 => .{ .name = "image", .type_expr = "eglImageOES" },
+            1 => .{ "image", "eglImageOES" },
             else => null,
         },
-        inline .GetAttribLocation,
+        .GenBuffers,
+        .GenBuffersARB,
+        => switch (param_index) {
+            1 => .{ "buffers", "[*]uint" },
+            else => null,
+        },
+        .GenFramebuffers,
+        .GenFramebuffersEXT,
+        .GenFramebuffersOES,
+        => switch (param_index) {
+            1 => .{ "framebuffers", "[*]uint" },
+            else => null,
+        },
+        .GenProgramPipelines,
+        .GenProgramPipelinesEXT,
+        => switch (param_index) {
+            1 => .{ "pipelines", "[*]uint" },
+            else => null,
+        },
+        .GenProgramsARB,
+        .GenProgramsNV,
+        => switch (param_index) {
+            1 => .{ "programs", "[*]uint" },
+            else => null,
+        },
+        .GenQueries,
+        .GenQueriesARB,
+        .GenQueriesEXT,
+        => switch (param_index) {
+            1 => .{ "ids", "[*]uint" },
+            else => null,
+        },
+        .GenRenderbuffers,
+        .GenRenderbuffersEXT,
+        .GenRenderbuffersOES,
+        => switch (param_index) {
+            1 => .{ "renderbuffers", "[*]uint" },
+            else => null,
+        },
+        .GenSamplers,
+        => switch (param_index) {
+            1 => .{ "samplers", "[*]uint" },
+            else => null,
+        },
+        .GenTextures,
+        .GenTexturesEXT,
+        => switch (param_index) {
+            1 => .{ "textures", "[*]uint" },
+            else => null,
+        },
+        .GenTransformFeedbacks,
+        .GenTransformFeedbacksNV,
+        => switch (param_index) {
+            1 => .{ "ids", "[*]uint" },
+            else => null,
+        },
+        .GenVertexArrays,
+        .GenVertexArraysAPPLE,
+        .GenVertexArraysOES,
+        => switch (param_index) {
+            1 => .{ "arrays", "[*]uint" },
+            else => null,
+        },
+        .GetAttribLocation,
+        => switch (param_index) {
+            1 => .{ "name", "[*:0]const char" },
+            else => null,
+        },
         .GetAttribLocationARB,
-        .GetUniformLocation,
-        .GetUniformLocationARB,
-        => |tag| switch (param_index) {
-            1 => .{
-                .name = "name",
-                .type_expr = "[*:0]const " ++ switch (tag) {
-                    .GetAttribLocationARB, .GetUniformLocationARB => "charARB",
-                    else => "char",
-                },
-            },
+        => switch (param_index) {
+            1 => .{ "name", "[*:0]const charARB" },
+            else => null,
+        },
+        .GetBooleanv,
+        => switch (param_index) {
+            1 => .{ "data", "[*]boolean" },
             else => null,
         },
         .GetBooleani_v,
         .GetBooleanIndexedvEXT,
         => switch (param_index) {
-            2 => .{ .name = "data", .type_expr = "[*]boolean" },
-            else => null,
-        },
-        .GetBooleanv,
-        => switch (param_index) {
-            1 => .{ .name = "data", .type_expr = "[*]boolean" },
-            else => null,
-        },
-        .GetDoublei_v,
-        .GetDoublei_vEXT,
-        .GetDoubleIndexedvEXT,
-        => switch (param_index) {
-            2 => .{
-                .name = switch (command) {
-                    .GetDoublei_vEXT => "params",
-                    else => "data",
-                },
-                .type_expr = "[*]double",
-            },
+            2 => .{ "data", "[*]boolean" },
             else => null,
         },
         .GetDoublev,
         => switch (param_index) {
-            1 => .{ .name = "data", .type_expr = "[*]double" },
+            1 => .{ "data", "[*]double" },
             else => null,
         },
-        .GetFloati_v,
-        .GetFloati_vEXT,
-        .GetFloati_vNV,
-        .GetFloati_vOES,
-        .GetFloatIndexedvEXT,
+        .GetDoublei_v,
         => switch (param_index) {
-            2 => .{
-                .name = switch (command) {
-                    .GetFloati_vEXT => "params",
-                    else => "data",
-                },
-                .type_expr = "[*]float",
-            },
+            2 => .{ "data", "[*]double" },
+            else => null,
+        },
+        .GetDoublei_vEXT,
+        => switch (param_index) {
+            2 => .{ "params", "[*]double" },
+            else => null,
+        },
+        .GetDoubleIndexedvEXT,
+        => switch (param_index) {
+            2 => .{ "data", "[*]double" },
             else => null,
         },
         .GetFloatv,
         => switch (param_index) {
-            1 => .{ .name = "data", .type_expr = "[*]float" },
+            1 => .{ "data", "[*]float" },
             else => null,
         },
-        .GetInteger64i_v,
+        .GetFloati_v,
         => switch (param_index) {
-            2 => .{ .name = "data", .type_expr = "[*]int64" },
+            2 => .{ "data", "[*]float" },
             else => null,
         },
-        .GetInteger64v,
-        .GetInteger64vAPPLE,
-        .GetInteger64vEXT,
+        .GetFloati_vEXT,
         => switch (param_index) {
-            1 => .{
-                .name = switch (command) {
-                    .GetInteger64vAPPLE => "params",
-                    else => "data",
-                },
-                .type_expr = "[*]int64",
-            },
+            2 => .{ "params", "[*]float" },
             else => null,
         },
-        .GetIntegeri_v,
-        .GetIntegeri_vEXT,
-        .GetIntegerIndexedvEXT,
+        .GetFloati_vNV,
+        .GetFloati_vOES,
+        .GetFloatIndexedvEXT,
         => switch (param_index) {
-            2 => .{ .name = "data", .type_expr = "[*]int" },
+            2 => .{ "data", "[*]float" },
             else => null,
         },
         .GetIntegerv,
         => switch (param_index) {
-            1 => .{ .name = "data", .type_expr = "[*]int" },
+            1 => .{ "data", "[*]int" },
             else => null,
         },
-        .GetProgramInfoLog,
-        .GetShaderInfoLog,
+        .GetIntegeri_v,
+        .GetIntegeri_vEXT,
         => switch (param_index) {
-            2 => .{ .name = "length", .type_expr = "?*sizei" },
-            3 => .{ .name = "infoLog", .type_expr = "[*]char" },
+            2 => .{ "data", "[*]int" },
+            else => null,
+        },
+        .GetIntegerui64vNV,
+        => switch (param_index) {
+            1 => .{ "result", "[*]uint64EXT" },
+            else => null,
+        },
+        .GetIntegerui64i_vNV,
+        => switch (param_index) {
+            2 => .{ "result", "[*]uint64EXT" },
+            else => null,
+        },
+        .GetInteger64v,
+        => switch (param_index) {
+            1 => .{ "data", "[*]int64" },
+            else => null,
+        },
+        .GetInteger64vAPPLE,
+        => switch (param_index) {
+            1 => .{ "params", "[*]int64" },
+            else => null,
+        },
+        .GetInteger64vEXT,
+        => switch (param_index) {
+            1 => .{ "data", "[*]int64" },
+            else => null,
+        },
+        .GetInteger64i_v,
+        => switch (param_index) {
+            2 => .{ "data", "[*]int64" },
+            else => null,
+        },
+        .GetIntegerIndexedvEXT,
+        => switch (param_index) {
+            2 => .{ "data", "[*]int" },
             else => null,
         },
         .GetProgramiv,
+        .GetProgramivARB,
+        .GetProgramivNV,
+        => switch (param_index) {
+            2 => .{ "param", "*int" },
+            else => null,
+        },
+        .GetProgramInfoLog,
+        => switch (param_index) {
+            2 => .{ "length", "?*sizei" },
+            3 => .{ "infoLog", "[*]char" },
+            else => null,
+        },
         .GetShaderiv,
         => switch (param_index) {
-            2 => .{ .name = "param", .type_expr = "*int" },
+            2 => .{ "param", "*int" },
+            else => null,
+        },
+        .GetShaderInfoLog,
+        => switch (param_index) {
+            2 => .{ "length", "?*sizei" },
+            3 => .{ "infoLog", "[*]char" },
             else => null,
         },
         .GetShaderPrecisionFormat,
         => switch (param_index) {
-            2 => .{ .name = "range", .type_expr = "*int" },
-            3 => .{ .name = "precision", .type_expr = "*int" },
+            2 => .{ "range", "*[2]int" },
+            3 => .{ "precision", "*int" },
             else => null,
         },
-        inline .GetShaderSource,
+        .GetShaderSource,
+        => switch (param_index) {
+            2 => .{ "length", "?*sizei" },
+            3 => .{ "source", "[*]char" },
+            else => null,
+        },
         .GetShaderSourceARB,
-        => |tag| switch (param_index) {
-            2 => .{ .name = "length", .type_expr = "?*sizei" },
-            3 => .{
-                .name = "source",
-                .type_expr = "[*]" ++ switch (tag) {
-                    .GetShaderSourceARB => "charARB",
-                    else => "char",
-                },
-            },
+        => switch (param_index) {
+            2 => .{ "length", "?*sizei" },
+            3 => .{ "source", "[*]charARB" },
+            else => null,
+        },
+        .GetSynciv,
+        .GetSyncivAPPLE,
+        => switch (param_index) {
+            0 => .{ "sync_", "sync" },
+            else => null,
+        },
+        .GetUniformLocation,
+        => switch (param_index) {
+            1 => .{ "name", "[*:0]const char" },
+            else => null,
+        },
+        .GetUniformLocationARB,
+        => switch (param_index) {
+            1 => .{ "name", "[*:0]const charARB" },
             else => null,
         },
         .GetVkProcAddrNV,
         => switch (param_index) {
-            0 => .{ .name = "name", .type_expr = "[*:0]const char" },
+            0 => .{ "name", "[*:0]const char" },
             else => null,
         },
-        inline .ShaderSource,
+        .IsSync,
+        .IsSyncAPPLE,
+        => switch (param_index) {
+            0 => .{ "sync_", "?sync" },
+            else => null,
+        },
+        .NamedBufferStorageExternalEXT,
+        => switch (param_index) {
+            3 => .{ "clientBuffer", "eglClientBufferEXT" },
+            else => null,
+        },
+        .ShaderSource,
+        => switch (param_index) {
+            2 => .{ "strings", "[*]const [*]const char" },
+            3 => .{ "lengths", "?[*]const int" },
+            else => null,
+        },
         .ShaderSourceARB,
-        => |tag| switch (param_index) {
-            2 => .{
-                .name = "strings",
-                .type_expr = "[*]const [*]const " ++ switch (tag) {
-                    .GetShaderSourceARB => "charARB",
-                    else => "char",
-                },
-            },
-            3 => .{ .name = "lengths", .type_expr = "?[*]const int" },
+        => switch (param_index) {
+            2 => .{ "strings", "[*]const [*]const charARB" },
+            3 => .{ "lengths", "?[*]const int" },
             else => null,
         },
         .VertexAttribIPointer,
         .VertexAttribIPointerEXT,
+        => switch (param_index) {
+            4 => .{ "pointer", "usize" },
+            else => null,
+        },
         .VertexAttribLPointer,
         .VertexAttribLPointerEXT,
-        .VertexAttribPointerNV,
         => switch (param_index) {
-            4 => .{ .name = "pointer", .type_expr = "usize" },
+            4 => .{ "pointer", "usize" },
             else => null,
         },
         .VertexAttribPointer,
         .VertexAttribPointerARB,
         => switch (param_index) {
-            5 => .{ .name = "pointer", .type_expr = "usize" },
+            5 => .{ "pointer", "usize" },
+            else => null,
+        },
+        .VertexAttribPointerNV,
+        => switch (param_index) {
+            4 => .{ "pointer", "usize" },
+            else => null,
+        },
+        .WaitSync,
+        .WaitSyncAPPLE,
+        => switch (param_index) {
+            0 => .{ "sync_", "sync" },
             else => null,
         },
         else => null,
@@ -1304,27 +1435,27 @@ fn paramOverride(command: registry.Command.Name, param_index: usize) ?struct {
 }
 
 fn renderReturnType(writer: anytype, command: ResolvedCommands.Entry) !void {
-    if (returnTypeOverride(command.key)) |override| {
-        try writer.writeAll(override.type_expr);
+    if (returnTypeOverride(command.key)) |override_type_string| {
+        try writer.writeAll(override_type_string);
     } else {
         try writer.print("{f}", .{fmtTypeExpr(command.value.return_type_expr)});
     }
 }
 
-fn returnTypeOverride(command: registry.Command.Name) ?struct {
-    type_expr: []const u8,
-} {
+fn returnTypeOverride(command: registry.Command.Name) ?[]const u8 {
     return switch (command) {
         .CreateSyncFromCLeventARB,
+        => "?sync",
         .FenceSync,
         .FenceSyncAPPLE,
+        => "?sync",
         .ImportSyncEXT,
-        => .{ .type_expr = "?sync" },
+        => "?sync",
         .GetString,
         .GetStringi,
-        => .{ .type_expr = "?[*:0]const ubyte" },
+        => "?[*:0]const ubyte",
         .GetVkProcAddrNV,
-        => .{ .type_expr = "?VULKANPROCNV" },
+        => "?VULKANPROCNV",
         else => null,
     };
 }
