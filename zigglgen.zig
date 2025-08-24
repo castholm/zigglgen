@@ -405,7 +405,7 @@ fn renderCode(
 
     try writer.print("" ++
         // REUSE-IgnoreStart
-        \\// © 2013-2020 The Khronos Group Inc.
+        \\// © 2013-2025 The Khronos Group Inc.
         \\// © 2024 Carl Åstholm
         \\// SPDX-License-Identifier: Apache-2.0 AND MIT
         // REUSE-IgnoreEnd

@@ -24,15 +24,17 @@ function main {
         }
 
         # REUSE-IgnoreStart
-        if ($registry.comment -notmatch '(?m)^Copyright 2013-2020 The Khronos Group Inc\.\r?\nSPDX-License-Identifier: Apache-2\.0$') {
+        if ($registry.comment -notmatch '(?m)^Copyright 2013-2025 The Khronos Group Inc\.\r?\nSPDX-License-Identifier: Apache-2\.0$') {
             throw "The OpenGL XML API Registry license notice has changed."
         }
         # REUSE-IgnoreEnd
 
-        processApiRegistry $registry $rev | zig fmt --stdin | Set-Content api_registry.zig
+        processApiRegistry $registry $rev | Set-Content api_registry.zig
+        zig fmt api_registry.zig
         zig test api_registry.zig
 
-        processGeneratorOptions $registry $rev | zig fmt --stdin | Set-Content GeneratorOptions.zig
+        processGeneratorOptions $registry $rev | Set-Content GeneratorOptions.zig
+        zig fmt GeneratorOptions.zig
         zig test GeneratorOptions.zig
     } finally {
         Remove-Item _OpenGL-Registry -Recurse -Force
@@ -41,7 +43,7 @@ function main {
 
 function processApiRegistry ([System.Xml.XmlElement] $registry, [string] $rev) {
     # REUSE-IgnoreStart
-    '// © 2013-2020 The Khronos Group Inc.'
+    '// © 2013-2025 The Khronos Group Inc.'
     '// © 2024 Carl Åstholm'
     '// SPDX-License-Identifier: Apache-2.0 AND MIT'
     # REUSE-IgnoreEnd
@@ -324,7 +326,7 @@ function processApiRegistry ([System.Xml.XmlElement] $registry, [string] $rev) {
 
 function processGeneratorOptions ([System.Xml.XmlElement] $registry, [string] $rev) {
     # REUSE-IgnoreStart
-    '// © 2013-2020 The Khronos Group Inc.'
+    '// © 2013-2025 The Khronos Group Inc.'
     '// © 2024 Carl Åstholm'
     '// SPDX-License-Identifier: Apache-2.0 AND MIT'
     # REUSE-IgnoreEnd
