@@ -535,6 +535,27 @@ fn renderCode(
         \\pub const APIENTRY: std.builtin.CallingConvention = if (builtin.os.tag == .windows) .winapi else .c;
         \\pub const PROC = *align(@alignOf(fn () callconv(APIENTRY) void)) const anyopaque;
         \\
+    );
+    if (commands.contains(.DrawArraysIndirect) or
+        commands.contains(.MultiDrawArraysIndirect) or
+        commands.contains(.MultiDrawArraysIndirectCount))
+    {
+        try writer.writeAll(
+            \\pub const DrawArraysIndirectCommand = extern struct { count: uint, instanceCount: uint, first: uint, baseInstance: uint };
+            \\
+        );
+    }
+    if (commands.contains(.DrawElementsIndirect) or
+        commands.contains(.MultiDrawElementsIndirect) or
+        commands.contains(.MultiDrawElementsIndirectCount))
+    {
+        try writer.writeAll(
+            \\pub const DrawElementsIndirectCommand = extern struct { count: uint, instanceCount: uint, firstIndex: uint, baseVertex: int, baseInstance: uint };
+            \\
+        );
+    }
+    try writer.writeAll(
+        \\
         \\//#region Types
         \\
     );
@@ -1350,13 +1371,20 @@ fn paramOverride(command: registry.Command.Name, param_index: usize) ?struct { [
             else => null,
         },
         .ColorSubTable,
+        .ColorSubTableEXT,
         => switch (param_index) {
             5 => .{ "data", "?*const anyopaque" },
             else => null,
         },
         .ColorTable,
+        .ColorTableEXT,
         => switch (param_index) {
             5 => .{ "data", "?*const anyopaque" },
+            else => null,
+        },
+        .ColorTableSGI,
+        => switch (param_index) {
+            5 => .{ "table", "?*const anyopaque" },
             else => null,
         },
         .ColorTableParameteriv,
@@ -1568,11 +1596,11 @@ fn paramOverride(command: registry.Command.Name, param_index: usize) ?struct { [
             else => null,
         },
         .DeleteProgramsARB,
-        .DeleteProgramsNV,
         => switch (param_index) {
             1 => .{ "programs", "[*]const uint" },
             else => null,
         },
+        .DeleteProgramsNV,
         .DeleteQueries,
         .DeleteQueriesARB,
         .DeleteQueriesEXT,
@@ -1617,26 +1645,178 @@ fn paramOverride(command: registry.Command.Name, param_index: usize) ?struct { [
             1 => .{ "arrays", "[*]const uint" },
             else => null,
         },
+        .DepthRangeArrayv,
+        => switch (param_index) {
+            2 => .{ "v", "[*]const [2]double" },
+            else => null,
+        },
+        .Disable,
+        => switch (param_index) {
+            0 => .{ "target", "@\"enum\"" },
+            else => null,
+        },
+        .DrawArraysIndirect,
+        => switch (param_index) {
+            1 => .{ "indirect", "*const DrawArraysIndirectCommand" },
+            else => null,
+        },
         .DrawBuffers,
         .DrawBuffersARB,
         .DrawBuffersEXT,
         .DrawBuffersATI,
         .DrawBuffersNV,
         => switch (param_index) {
-            1 => .{ "bufs", "[*]@\"enum\"" },
+            1 => .{ "bufs", "[*]const @\"enum\"" },
             else => null,
         },
         .DrawElements,
+        .DrawElementsBaseVertex,
+        .DrawElementsBaseVertexEXT,
+        .DrawElementsBaseVertexOES,
         => switch (param_index) {
             3 => .{ "indices", "usize" },
             else => null,
         },
+        .DrawElementsIndirect,
+        => switch (param_index) {
+            2 => .{ "indirect", "*const DrawElementsIndirectCommand" },
+            else => null,
+        },
+        .DrawElementsInstanced,
+        .DrawElementsInstancedARB,
+        .DrawElementsInstancedEXT,
+        .DrawElementsInstancedANGLE,
+        .DrawElementsInstancedNV,
+        .DrawElementsInstancedBaseInstance,
+        .DrawElementsInstancedBaseInstanceEXT,
+        .DrawElementsInstancedBaseVertex,
+        .DrawElementsInstancedBaseVertexEXT,
+        .DrawElementsInstancedBaseVertexBaseInstance,
+        .DrawElementsInstancedBaseVertexBaseInstanceEXT,
+        => switch (param_index) {
+            3 => .{ "indices", "usize" },
+            else => null,
+        },
+        .DrawPixels,
+        => switch (param_index) {
+            4 => .{ "pixels", "?*const anyopaque" },
+            else => null,
+        },
+        .DrawRangeElements,
+        .DrawRangeElementsEXT,
+        .DrawRangeElementsBaseVertex,
+        .DrawRangeElementsBaseVertexEXT,
+        .DrawRangeElementsBaseVertexOES,
+        => switch (param_index) {
+            5 => .{ "indices", "usize" },
+            else => null,
+        },
         .EGLImageTargetRenderbufferStorageOES,
+        => switch (param_index) {
+            1 => .{ "image", "*eglImageOES" },
+            else => null,
+        },
         .EGLImageTargetTexStorageEXT,
+        => switch (param_index) {
+            1 => .{ "image", "*eglImageOES" },
+            2 => .{ "attrib_list", "?[*:NONE]const int" },
+            else => null,
+        },
         .EGLImageTargetTexture2DOES,
+        => switch (param_index) {
+            1 => .{ "image", "*eglImageOES" },
+            else => null,
+        },
         .EGLImageTargetTextureStorageEXT,
         => switch (param_index) {
             1 => .{ "image", "*eglImageOES" },
+            2 => .{ "attrib_list", "?[*:NONE]const int" },
+            else => null,
+        },
+        .EdgeFlagPointer,
+        => switch (param_index) {
+            1 => .{ "pointer", "usize" },
+            else => null,
+        },
+        .Enable,
+        => switch (param_index) {
+            0 => .{ "target", "@\"enum\"" },
+            else => null,
+        },
+        .EvalCoord1fv,
+        => switch (param_index) {
+            0 => .{ "arg", "*const float" },
+            else => null,
+        },
+        .EvalCoord1dv,
+        => switch (param_index) {
+            0 => .{ "arg", "*const double" },
+            else => null,
+        },
+        .EvalCoord2fv,
+        => switch (param_index) {
+            0 => .{ "arg", "*const [2]float" },
+            else => null,
+        },
+        .EvalCoord2dv,
+        => switch (param_index) {
+            0 => .{ "arg", "*const [2]double" },
+            else => null,
+        },
+        .FeedbackBuffer,
+        => switch (param_index) {
+            0 => .{ "n", "sizei" },
+            2 => .{ "buffer", "[*]float" },
+            else => null,
+        },
+        .Fogiv,
+        => switch (param_index) {
+            1 => .{ "params", "[*]const int" },
+            else => null,
+        },
+        .Fogxv,
+        => switch (param_index) {
+            1 => .{ "params", "[*]const fixed" },
+            else => null,
+        },
+        .Fogfv,
+        => switch (param_index) {
+            1 => .{ "params", "[*]const float" },
+            else => null,
+        },
+        .FogCoordfv,
+        => switch (param_index) {
+            0 => .{ "coord", "*const float" },
+            else => null,
+        },
+        .FogCoorddv,
+        => switch (param_index) {
+            0 => .{ "coord", "*const double" },
+            else => null,
+        },
+        .FogCoordPointer,
+        => switch (param_index) {
+            2 => .{ "pointer", "usize" },
+            else => null,
+        },
+        .FramebufferTexture3D,
+        => switch (param_index) {
+            5 => .{ "layer", "int" },
+            else => null,
+        },
+        .FrontFace,
+        => switch (param_index) {
+            0 => .{ "dir", "@\"enum\"" },
+            else => null,
+        },
+        .Frustum,
+        => switch (param_index) {
+            0 => .{ "l", "double" },
+            1 => .{ "r", "double" },
+            2 => .{ "b", "double" },
+            3 => .{ "t", "double" },
+            4 => .{ "n", "double" },
+            5 => .{ "f", "double" },
             else => null,
         },
         .GenBuffers,
@@ -1652,6 +1832,11 @@ fn paramOverride(command: registry.Command.Name, param_index: usize) ?struct { [
             1 => .{ "framebuffers", "[*]uint" },
             else => null,
         },
+        .GenLists,
+        => switch (param_index) {
+            0 => .{ "s", "sizei" },
+            else => null,
+        },
         .GenProgramPipelines,
         .GenProgramPipelinesEXT,
         => switch (param_index) {
@@ -1659,11 +1844,11 @@ fn paramOverride(command: registry.Command.Name, param_index: usize) ?struct { [
             else => null,
         },
         .GenProgramsARB,
-        .GenProgramsNV,
         => switch (param_index) {
             1 => .{ "programs", "[*]uint" },
             else => null,
         },
+        .GenProgramsNV,
         .GenQueries,
         .GenQueriesARB,
         .GenQueriesEXT,
@@ -1702,6 +1887,11 @@ fn paramOverride(command: registry.Command.Name, param_index: usize) ?struct { [
             1 => .{ "arrays", "[*]uint" },
             else => null,
         },
+        .GetActiveAtomicCounterBufferiv,
+        => switch (param_index) {
+            3 => .{ "params", "[*]int" },
+            else => null,
+        },
         .GetActiveAttrib,
         => switch (param_index) {
             3 => .{ "length", "?*sizei" },
@@ -1716,6 +1906,25 @@ fn paramOverride(command: registry.Command.Name, param_index: usize) ?struct { [
             4 => .{ "size", "*int" },
             5 => .{ "type", "*@\"enum\"" },
             6 => .{ "name", "[*]charARB" },
+            else => null,
+        },
+        .GetActiveSubroutineName,
+        => switch (param_index) {
+            3 => .{ "count", "sizei" },
+            4 => .{ "length", "?*sizei" },
+            5 => .{ "name", "[*]char" },
+            else => null,
+        },
+        .GetActiveSubroutineUniformiv,
+        => switch (param_index) {
+            4 => .{ "values", "[*]int" },
+            else => null,
+        },
+        .GetActiveSubroutineUniformName,
+        => switch (param_index) {
+            3 => .{ "count", "sizei" },
+            4 => .{ "length", "?*sizei" },
+            5 => .{ "name", "[*]char" },
             else => null,
         },
         .GetActiveUniform,
@@ -1743,6 +1952,12 @@ fn paramOverride(command: registry.Command.Name, param_index: usize) ?struct { [
         => switch (param_index) {
             3 => .{ "length", "?*sizei" },
             4 => .{ "uniformBlockName", "[*]char" },
+            else => null,
+        },
+        .GetActiveUniformName,
+        => switch (param_index) {
+            3 => .{ "length", "?*sizei" },
+            4 => .{ "uniformName", "[*]char" },
             else => null,
         },
         .GetActiveUniformsiv,
@@ -1779,6 +1994,10 @@ fn paramOverride(command: registry.Command.Name, param_index: usize) ?struct { [
             else => null,
         },
         .GetBufferParameteriv,
+        => switch (param_index) {
+            2 => .{ "data", "[*]int" },
+            else => null,
+        },
         .GetBufferParameterivARB,
         => switch (param_index) {
             2 => .{ "params", "[*]int" },
@@ -1786,7 +2005,7 @@ fn paramOverride(command: registry.Command.Name, param_index: usize) ?struct { [
         },
         .GetBufferParameteri64v,
         => switch (param_index) {
-            2 => .{ "params", "[*]int64" },
+            2 => .{ "data", "[*]int64" },
             else => null,
         },
         .GetBufferParameterui64vNV,
@@ -1801,6 +2020,94 @@ fn paramOverride(command: registry.Command.Name, param_index: usize) ?struct { [
             2 => .{ "params", "[*]?*anyopaque" },
             else => null,
         },
+        .GetBufferSubData,
+        .GetBufferSubDataARB,
+        => switch (param_index) {
+            3 => .{ "data", "*anyopaque" },
+            else => null,
+        },
+        .GetClipPlane,
+        => switch (param_index) {
+            1 => .{ "eqn", "*[4]double" },
+            else => null,
+        },
+        .GetClipPlanex,
+        => switch (param_index) {
+            1 => .{ "eqn", "*[4]fixed" },
+            else => null,
+        },
+        .GetClipPlanef,
+        => switch (param_index) {
+            1 => .{ "eqn", "*[4]float" },
+            else => null,
+        },
+        .GetColorTable,
+        => switch (param_index) {
+            3 => .{ "table", "?*anyopaque" },
+            else => null,
+        },
+        .GetColorTableParameteriv,
+        => switch (param_index) {
+            2 => .{ "params", "[*]int" },
+            else => null,
+        },
+        .GetColorTableParameterfv,
+        => switch (param_index) {
+            2 => .{ "params", "[*]float" },
+            else => null,
+        },
+        .GetCompressedTexImage,
+        => switch (param_index) {
+            2 => .{ "pixels", "?*anyopaque" },
+            else => null,
+        },
+        .GetCompressedTextureImage,
+        => switch (param_index) {
+            3 => .{ "pixels", "?*anyopaque" },
+            else => null,
+        },
+        .GetCompressedTextureSubImage,
+        => switch (param_index) {
+            9 => .{ "pixels", "?*anyopaque" },
+            else => null,
+        },
+        .GetConvolutionFilter,
+        => switch (param_index) {
+            3 => .{ "pixels", "?*anyopaque" },
+            else => null,
+        },
+        .GetConvolutionParameteriv,
+        => switch (param_index) {
+            2 => .{ "params", "*[4]int" },
+            else => null,
+        },
+        .GetConvolutionParameterfv,
+        => switch (param_index) {
+            2 => .{ "params", "*[4]float" },
+            else => null,
+        },
+        .GetDebugMessageLog,
+        .GetDebugMessageLogARB,
+        .GetDebugMessageLogKHR,
+        => switch (param_index) {
+            2 => .{ "sources", "?[*]@\"enum\"" },
+            3 => .{ "types", "?[*]@\"enum\"" },
+            4 => .{ "ids", "?[*]uint" },
+            5 => .{ "severities", "?[*]@\"enum\"" },
+            6 => .{ "lengths", "?[*]sizei" },
+            7 => .{ "messageLog", "?[*]char" },
+            else => null,
+        },
+        .GetDebugMessageLogAMD,
+        => switch (param_index) {
+            1 => .{ "logSize", "sizei" },
+            2 => .{ "categories", "?[*]@\"enum\"" },
+            3 => .{ "severities", "?[*]@\"enum\"" },
+            4 => .{ "ids", "?[*]uint" },
+            5 => .{ "lengths", "?[*]sizei" },
+            6 => .{ "messageLog", "?[*]char" },
+            else => null,
+        },
         .GetDoublev,
         => switch (param_index) {
             1 => .{ "data", "[*]double" },
@@ -1813,12 +2120,18 @@ fn paramOverride(command: registry.Command.Name, param_index: usize) ?struct { [
         },
         .GetDoublei_vEXT,
         => switch (param_index) {
-            2 => .{ "params", "[*]double" },
+            0 => .{ "target", "@\"enum\"" },
+            2 => .{ "data", "[*]double" },
             else => null,
         },
         .GetDoubleIndexedvEXT,
         => switch (param_index) {
             2 => .{ "data", "[*]double" },
+            else => null,
+        },
+        .GetFixedv,
+        => switch (param_index) {
+            1 => .{ "data", "[*]fixed" },
             else => null,
         },
         .GetFloatv,
@@ -1833,7 +2146,8 @@ fn paramOverride(command: registry.Command.Name, param_index: usize) ?struct { [
         },
         .GetFloati_vEXT,
         => switch (param_index) {
-            2 => .{ "params", "[*]float" },
+            0 => .{ "target", "@\"enum\"" },
+            2 => .{ "data", "[*]float" },
             else => null,
         },
         .GetFloati_vNV,
@@ -1841,6 +2155,39 @@ fn paramOverride(command: registry.Command.Name, param_index: usize) ?struct { [
         .GetFloatIndexedvEXT,
         => switch (param_index) {
             2 => .{ "data", "[*]float" },
+            else => null,
+        },
+        .GetFragDataIndex,
+        .GetFragDataIndexEXT,
+        .GetFragDataLocation,
+        .GetFragDataLocationEXT,
+        => switch (param_index) {
+            1 => .{ "name", "[*:0]const char" },
+            else => null,
+        },
+        .GetFramebufferAttachmentParameteriv,
+        => switch (param_index) {
+            3 => .{ "params", "[*]int" },
+            else => null,
+        },
+        .GetFramebufferParameteriv,
+        => switch (param_index) {
+            2 => .{ "params", "[*]int" },
+            else => null,
+        },
+        .GetHistogram,
+        => switch (param_index) {
+            4 => .{ "values", "?*anyopaque" },
+            else => null,
+        },
+        .GetHistogramParameteriv,
+        => switch (param_index) {
+            2 => .{ "params", "[*]int" },
+            else => null,
+        },
+        .GetHistogramParameterfv,
+        => switch (param_index) {
+            2 => .{ "params", "[*]float" },
             else => null,
         },
         .GetIntegerv,
@@ -1877,12 +2224,124 @@ fn paramOverride(command: registry.Command.Name, param_index: usize) ?struct { [
         },
         .GetIntegerui64vNV,
         => switch (param_index) {
+            0 => .{ "value", "@\"enum\"" },
             1 => .{ "result", "[*]uint64EXT" },
             else => null,
         },
         .GetIntegerui64i_vNV,
         => switch (param_index) {
-            2 => .{ "result", "[*]uint64EXT" },
+            0 => .{ "value", "@\"enum\"" },
+            2 => .{ "data", "[*]uint64EXT" },
+            else => null,
+        },
+        .GetInternalformativ,
+        => switch (param_index) {
+            4 => .{ "params", "[*]int" },
+            else => null,
+        },
+        .GetInternalformati64v,
+        => switch (param_index) {
+            4 => .{ "params", "[*]int64" },
+            else => null,
+        },
+        .GetLightiv,
+        => switch (param_index) {
+            2 => .{ "params", "[*]int" },
+            else => null,
+        },
+        .GetLightxv,
+        => switch (param_index) {
+            2 => .{ "params", "[*]fixed" },
+            else => null,
+        },
+        .GetLightfv,
+        => switch (param_index) {
+            2 => .{ "params", "[*]float" },
+            else => null,
+        },
+        .GetMapiv,
+        => switch (param_index) {
+            2 => .{ "data", "[*]int" },
+            else => null,
+        },
+        .GetMapfv,
+        => switch (param_index) {
+            2 => .{ "data", "[*]float" },
+            else => null,
+        },
+        .GetMapdv,
+        => switch (param_index) {
+            2 => .{ "data", "[*]double" },
+            else => null,
+        },
+        .GetMaterialiv,
+        => switch (param_index) {
+            2 => .{ "params", "[*]int" },
+            else => null,
+        },
+        .GetMaterialxv,
+        => switch (param_index) {
+            2 => .{ "params", "[*]fixed" },
+            else => null,
+        },
+        .GetMaterialfv,
+        => switch (param_index) {
+            2 => .{ "params", "[*]float" },
+            else => null,
+        },
+        .GetMinmax,
+        => switch (param_index) {
+            4 => .{ "values", "?*anyopaque" },
+            else => null,
+        },
+        .GetMinmaxParameteriv,
+        => switch (param_index) {
+            2 => .{ "params", "[*]int" },
+            else => null,
+        },
+        .GetMinmaxParameterfv,
+        => switch (param_index) {
+            2 => .{ "params", "[*]float" },
+            else => null,
+        },
+        .GetMultisamplefv,
+        => switch (param_index) {
+            2 => .{ "val", "*[2]float" },
+            else => null,
+        },
+        .GetNamedBufferParameteriv,
+        => switch (param_index) {
+            2 => .{ "data", "[*]int" },
+            else => null,
+        },
+        .GetNamedBufferParameteri64v,
+        => switch (param_index) {
+            2 => .{ "data", "[*]int64" },
+            else => null,
+        },
+        .GetNamedBufferPointerv,
+        => switch (param_index) {
+            2 => .{ "params", "[*]?*anyopaque" },
+            else => null,
+        },
+        .GetNamedBufferSubData,
+        => switch (param_index) {
+            3 => .{ "data", "*anyopaque" },
+            else => null,
+        },
+        .GetNamedFramebufferAttachmentParameteriv,
+        => switch (param_index) {
+            3 => .{ "params", "[*]int" },
+            else => null,
+        },
+        .GetNamedFramebufferParameteriv,
+        => switch (param_index) {
+            2 => .{ "params", "[*]int" },
+            else => null,
+        },
+        .GetNamedRenderbufferParameteriv,
+        => switch (param_index) {
+            2 => .{ "params", "[*]int" },
             else => null,
         },
         .GetProgramiv,
@@ -1931,6 +2390,21 @@ fn paramOverride(command: registry.Command.Name, param_index: usize) ?struct { [
         .GetSyncivAPPLE,
         => switch (param_index) {
             0 => .{ "sync_", "*sync" },
+            else => null,
+        },
+        .GetTexImage,
+        => switch (param_index) {
+            4 => .{ "pixels", "?*anyopaque" },
+            else => null,
+        },
+        .GetTextureImage,
+        => switch (param_index) {
+            5 => .{ "pixels", "?*anyopaque" },
+            else => null,
+        },
+        .GetTextureSubImage,
+        => switch (param_index) {
+            11 => .{ "pixels", "*anyopaque" },
             else => null,
         },
         .GetUniformLocation,
