@@ -363,6 +363,7 @@ function typeSortKey([string] $str) {
 (?x)
 \A
 (?<base>.+?)
+(?<type>(?<=\Aclamp)(?:x|h|f|d))?
 (?<extension>3DFX|AMD|ANDROID|ANGLE|APPLE|ARB|ARM|ATI|DMP|EXT|FJ|GREMEDY|HP|IBM|IMG|INGR|INTEL|KHR|MESA|MESAX|NV|NVX|OES|OML|OVR|PGI|QCOM|REND|S3|SGI|SGIS|SGIX|SUN|SUNX|VIV|WEBGL|WIN)?
 \z
 '@
@@ -370,8 +371,14 @@ function typeSortKey([string] $str) {
         (
             [regex]::Replace($Matches.base, '[0-9]+', { param ($m) $m.Value.PadLeft(5, '0') }) -csplit '(?<=[a-z])(?=[A-Z0-9])|(?<=[A-Z0-9])(?=[A-Z][a-z])'
             | ForEach-Object { basicSortKey $_ }
-        ) -join '001'
-    ) + "000$(switch ($Matches.extension) {
+        ) -join '002'
+    ) + "000$(switch ($Matches.type) {
+        default { '000' }
+        'x' { '001' }
+        'h' { '002' }
+        'f' { '003' }
+        'd' { '004' }
+    })001$(switch ($Matches.extension) {
         '' { '000' }
         'ARB' { '001' }
         'KHR' { '002' }
@@ -413,7 +420,7 @@ function commandSortKey ([string] $str) {
     b(?<!Attrib)|
     s(?<!Access|Address|Arrays|Bias|Bindless|Bounds|Buffers|Commands|Controls|Coords|Cores|Counters|Elements|Feedbacks|Fences|Framebuffers|Glyphs|Groups|Indices|Instruments|Layers|Levels|Lists|Maps|Markers|Metrics|Monitors|Names|Objects|Ops|Parameters|Paths|Pipelines|Pixels|Points|Programs|Queries|Rates|Rectangles|Regions|Renderbuffers|Samplers|Samples|Segments|Semaphores|Shaders|Stages|States|Status|Surfaces|Symbols|Tasks|Textures|Threads|Triangles|Values|Varyings)|
     i(?<!Disablei|Enablei|Equationi|Fini|Funci|Maski|Separatei|Statei|Stringi)|
-    i64(?<!Feedbacki64|Integerui64)|
+    i64(?<!Integerui64)|
     x(?<!Box|Index|Matrix|Tex|Vertex)|
     h(?<!Depth|Finish|Flush|Length|Path|Push|Through|Width)|
     f|
@@ -426,8 +433,7 @@ function commandSortKey ([string] $str) {
 (?<vector>
     v(?<!Env)|
     i(?<!Fini)|
-    i_v|
-    i64_v
+    _v
 )?
 (?<extension>3DFX|AMD|ANDROID|ANGLE|APPLE|ARB|ARM|ATI|DMP|EXT|FJ|GREMEDY|HP|IBM|IMG|INGR|INTEL|KHR|MESA|MESAX|NV|NVX|OES|OML|OVR|PGI|QCOM|REND|S3|SGI|SGIS|SGIX|SUN|SUNX|VIV|WEBGL|WIN)?
 \z
@@ -473,8 +479,7 @@ function commandSortKey ([string] $str) {
         default { '000' }
         'v' { '001' }
         'i' { '002' }
-        'i_v' { '003' }
-        'i64_v' { '004' }
+        '_v' { '003' }
     })003$(switch ($Matches.extension) {
         '' { '000' }
         'ARB' { '001' }
