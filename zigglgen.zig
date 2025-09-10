@@ -3200,7 +3200,7 @@ fn paramOverride(command: registry.Command.Name, param_index: usize) ?struct { [
             2 => .{ "params", "[*]const fixed" },
             else => null,
         },
-        .Materialxv,
+        .Materialfv,
         => switch (param_index) {
             2 => .{ "params", "[*]const float" },
             else => null,
@@ -3604,6 +3604,336 @@ fn paramOverride(command: registry.Command.Name, param_index: usize) ?struct { [
             2 => .{ "binary", "*anyopaque" },
             else => null,
         },
+        .ProgramUniform1iv,
+        => switch (param_index) {
+            3 => .{ "value", "[*]const int" },
+            else => null,
+        },
+        .ProgramUniform1fv,
+        => switch (param_index) {
+            3 => .{ "value", "[*]const float" },
+            else => null,
+        },
+        .ProgramUniform1dv,
+        => switch (param_index) {
+            3 => .{ "value", "[*]const double" },
+            else => null,
+        },
+        .ProgramUniform1uiv,
+        => switch (param_index) {
+            3 => .{ "value", "[*]const uint" },
+            else => null,
+        },
+        .ProgramUniform2iv,
+        => switch (param_index) {
+            3 => .{ "value", "[*]const [2]int" },
+            else => null,
+        },
+        .ProgramUniform2fv,
+        => switch (param_index) {
+            3 => .{ "value", "[*]const [2]float" },
+            else => null,
+        },
+        .ProgramUniform2dv,
+        => switch (param_index) {
+            3 => .{ "value", "[*]const [2]double" },
+            else => null,
+        },
+        .ProgramUniform2uiv,
+        => switch (param_index) {
+            3 => .{ "value", "[*]const [2]uint" },
+            else => null,
+        },
+        .ProgramUniform3iv,
+        => switch (param_index) {
+            3 => .{ "value", "[*]const [3]int" },
+            else => null,
+        },
+        .ProgramUniform3fv,
+        => switch (param_index) {
+            3 => .{ "value", "[*]const [3]float" },
+            else => null,
+        },
+        .ProgramUniform3dv,
+        => switch (param_index) {
+            3 => .{ "value", "[*]const [3]double" },
+            else => null,
+        },
+        .ProgramUniform3uiv,
+        => switch (param_index) {
+            3 => .{ "value", "[*]const [3]uint" },
+            else => null,
+        },
+        .ProgramUniform4iv,
+        => switch (param_index) {
+            3 => .{ "value", "[*]const [4]int" },
+            else => null,
+        },
+        .ProgramUniform4fv,
+        => switch (param_index) {
+            3 => .{ "value", "[*]const [4]float" },
+            else => null,
+        },
+        .ProgramUniform4dv,
+        => switch (param_index) {
+            3 => .{ "value", "[*]const [4]double" },
+            else => null,
+        },
+        .ProgramUniform4uiv,
+        => switch (param_index) {
+            3 => .{ "value", "[*]const [4]uint" },
+            else => null,
+        },
+        .ProgramUniformMatrix2fv,
+        => switch (param_index) {
+            4 => .{ "value", "[*]const [4]float" },
+            else => null,
+        },
+        .ProgramUniformMatrix2dv,
+        => switch (param_index) {
+            4 => .{ "value", "[*]const [4]double" },
+            else => null,
+        },
+        .ProgramUniformMatrix3fv,
+        => switch (param_index) {
+            4 => .{ "value", "[*]const [9]float" },
+            else => null,
+        },
+        .ProgramUniformMatrix3dv,
+        => switch (param_index) {
+            4 => .{ "value", "[*]const [9]double" },
+            else => null,
+        },
+        .ProgramUniformMatrix4fv,
+        => switch (param_index) {
+            4 => .{ "value", "[*]const [16]float" },
+            else => null,
+        },
+        .ProgramUniformMatrix4dv,
+        => switch (param_index) {
+            4 => .{ "value", "[*]const [16]double" },
+            else => null,
+        },
+        .ProgramUniformMatrix2x3fv,
+        => switch (param_index) {
+            4 => .{ "value", "[*]const [6]float" },
+            else => null,
+        },
+        .ProgramUniformMatrix2x3dv,
+        => switch (param_index) {
+            4 => .{ "value", "[*]const [6]double" },
+            else => null,
+        },
+        .ProgramUniformMatrix3x2fv,
+        => switch (param_index) {
+            4 => .{ "value", "[*]const [6]float" },
+            else => null,
+        },
+        .ProgramUniformMatrix3x2dv,
+        => switch (param_index) {
+            4 => .{ "value", "[*]const [6]double" },
+            else => null,
+        },
+        .ProgramUniformMatrix2x4fv,
+        => switch (param_index) {
+            4 => .{ "value", "[*]const [8]float" },
+            else => null,
+        },
+        .ProgramUniformMatrix2x4dv,
+        => switch (param_index) {
+            4 => .{ "value", "[*]const [8]double" },
+            else => null,
+        },
+        .ProgramUniformMatrix4x2fv,
+        => switch (param_index) {
+            4 => .{ "value", "[*]const [8]float" },
+            else => null,
+        },
+        .ProgramUniformMatrix4x2dv,
+        => switch (param_index) {
+            4 => .{ "value", "[*]const [8]double" },
+            else => null,
+        },
+        .ProgramUniformMatrix3x4fv,
+        => switch (param_index) {
+            4 => .{ "value", "[*]const [12]float" },
+            else => null,
+        },
+        .ProgramUniformMatrix3x4dv,
+        => switch (param_index) {
+            4 => .{ "value", "[*]const [12]double" },
+            else => null,
+        },
+        .ProgramUniformMatrix4x3fv,
+        => switch (param_index) {
+            4 => .{ "value", "[*]const [12]float" },
+            else => null,
+        },
+        .ProgramUniformMatrix4x3dv,
+        => switch (param_index) {
+            4 => .{ "value", "[*]const [12]double" },
+            else => null,
+        },
+        .ProvokingVertex,
+        => switch (param_index) {
+            0 => .{ "provokeMode", "@\"enum\"" },
+            else => null,
+        },
+        .PushDebugGroup,
+        => switch (param_index) {
+            3 => .{ "message", "[*]const char" },
+            else => null,
+        },
+        .RasterPos2sv,
+        => switch (param_index) {
+            0 => .{ "coords", "*const [2]short" },
+            else => null,
+        },
+        .RasterPos2iv,
+        => switch (param_index) {
+            0 => .{ "coords", "*const [2]int" },
+            else => null,
+        },
+        .RasterPos2fv,
+        => switch (param_index) {
+            0 => .{ "coords", "*const [2]float" },
+            else => null,
+        },
+        .RasterPos2dv,
+        => switch (param_index) {
+            0 => .{ "coords", "*const [2]double" },
+            else => null,
+        },
+        .RasterPos3sv,
+        => switch (param_index) {
+            0 => .{ "coords", "*const [3]short" },
+            else => null,
+        },
+        .RasterPos3iv,
+        => switch (param_index) {
+            0 => .{ "coords", "*const [3]int" },
+            else => null,
+        },
+        .RasterPos3fv,
+        => switch (param_index) {
+            0 => .{ "coords", "*const [3]float" },
+            else => null,
+        },
+        .RasterPos3dv,
+        => switch (param_index) {
+            0 => .{ "coords", "*const [3]double" },
+            else => null,
+        },
+        .RasterPos4sv,
+        => switch (param_index) {
+            0 => .{ "coords", "*const [4]short" },
+            else => null,
+        },
+        .RasterPos4iv,
+        => switch (param_index) {
+            0 => .{ "coords", "*const [4]int" },
+            else => null,
+        },
+        .RasterPos4fv,
+        => switch (param_index) {
+            0 => .{ "coords", "*const [4]float" },
+            else => null,
+        },
+        .RasterPos4dv,
+        => switch (param_index) {
+            0 => .{ "coords", "*const [4]double" },
+            else => null,
+        },
+        .ReadPixels,
+        => switch (param_index) {
+            6 => .{ "data", "?*anyopaque" },
+            else => null,
+        },
+        .ReadnPixels,
+        => switch (param_index) {
+            7 => .{ "data", "?*anyopaque" },
+            else => null,
+        },
+        .Rectsv,
+        => switch (param_index) {
+            0 => .{ "v1", "*const [2]short" },
+            1 => .{ "v2", "*const [2]short" },
+            else => null,
+        },
+        .Rectiv,
+        => switch (param_index) {
+            0 => .{ "v1", "*const [2]int" },
+            1 => .{ "v2", "*const [2]int" },
+            else => null,
+        },
+        .Rectfv,
+        => switch (param_index) {
+            0 => .{ "v1", "*const [2]float" },
+            1 => .{ "v2", "*const [2]float" },
+            else => null,
+        },
+        .Rectdv,
+        => switch (param_index) {
+            0 => .{ "v1", "*const [2]double" },
+            1 => .{ "v2", "*const [2]double" },
+            else => null,
+        },
+        .Rotatex,
+        => switch (param_index) {
+            0 => .{ "theta", "fixed" },
+            else => null,
+        },
+        .Rotatef,
+        => switch (param_index) {
+            0 => .{ "theta", "float" },
+            else => null,
+        },
+        .Rotated,
+        => switch (param_index) {
+            0 => .{ "theta", "double" },
+            else => null,
+        },
+        .SampleCoveragex,
+        => switch (param_index) {
+            0 => .{ "value", "fixed" },
+            else => null,
+        },
+        .SamplerParameteriv,
+        => switch (param_index) {
+            2 => .{ "param", "[*]const int" },
+            else => null,
+        },
+        .SamplerParameterfv,
+        => switch (param_index) {
+            2 => .{ "param", "[*]const float" },
+            else => null,
+        },
+        .SamplerParameterIiv,
+        => switch (param_index) {
+            2 => .{ "params", "[*]const int" },
+            else => null,
+        },
+        .SamplerParameterIuiv,
+        => switch (param_index) {
+            2 => .{ "params", "[*]const uint" },
+            else => null,
+        },
+        .Scissor,
+        => switch (param_index) {
+            0 => .{ "left", "int" },
+            1 => .{ "bottom", "int" },
+            else => null,
+        },
+        .ScissorArrayv,
+        => switch (param_index) {
+            2 => .{ "v", "[*]const [4]int" },
+            else => null,
+        },
+        .ScissorIndexedv,
+        => switch (param_index) {
+            1 => .{ "v", "*const [4]int" },
+            else => null,
+        },
         .SecondaryColor3b,
         => switch (param_index) {
             0 => .{ "r", "byte" },
@@ -3715,6 +4045,25 @@ fn paramOverride(command: registry.Command.Name, param_index: usize) ?struct { [
             3 => .{ "pointer", "usize" },
             else => null,
         },
+        .SelectBuffer,
+        => switch (param_index) {
+            0 => .{ "n", "sizei" },
+            1 => .{ "buffer", "[*]uint" },
+            else => null,
+        },
+        .SeparableFilter2D,
+        => switch (param_index) {
+            6 => .{ "row", "?*const anyopaque" },
+            7 => .{ "column", "?*const anyopaque" },
+            else => null,
+        },
+        .ShaderBinary,
+        => switch (param_index) {
+            1 => .{ "shaders", "[*]const uint" },
+            2 => .{ "binaryformat", "@\"enum\"" },
+            3 => .{ "binary", "*const anyopaque" },
+            else => null,
+        },
         .ShaderSource,
         => switch (param_index) {
             2 => .{ "string", "[*]const [*]const char" },
@@ -3725,6 +4074,20 @@ fn paramOverride(command: registry.Command.Name, param_index: usize) ?struct { [
         => switch (param_index) {
             2 => .{ "string", "[*]const [*]const charARB" },
             3 => .{ "lengths", "?[*]const int" },
+            else => null,
+        },
+        .SpecializeShader,
+        => switch (param_index) {
+            1 => .{ "pEntryPoint", "[*:0]const char" },
+            3 => .{ "pConstantIndex", "[*]const uint" },
+            4 => .{ "pConstantValue", "[*]const uint" },
+            else => null,
+        },
+        .StencilOp,
+        => switch (param_index) {
+            0 => .{ "sfail", "@\"enum\"" },
+            1 => .{ "dpfail", "@\"enum\"" },
+            2 => .{ "dppass", "@\"enum\"" },
             else => null,
         },
         .VertexAttribIPointer,
