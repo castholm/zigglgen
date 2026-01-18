@@ -766,11 +766,11 @@ fn renderCode(
             // Starting with GL 3.2, querying extensions via 'GetString' is no longer supported
             // under the Core profile.
             try writer.writeAll(
-                \\        var count: c_int = 0;
+                \\        var count: int = 0;
                 \\        procs.GetIntegerv(NUM_EXTENSIONS, (&count)[0..1]);
                 \\        if (count < 0) return false;
-                \\        var i: c_uint = 0;
-                \\        while (i < @as(c_uint, @intCast(count))) : (i += 1) {
+                \\        var i: uint = 0;
+                \\        while (i < @as(uint, @intCast(count))) : (i += 1) {
                 \\            const prefixed_name = procs.GetStringi(EXTENSIONS, i) orelse return false;
                 \\            if (std.mem.orderZ(u8, prefixed_name, "GL_" ++ name) == .eq) {
                 \\
@@ -908,7 +908,7 @@ fn getTypeString(@"type": registry.Type.Name) []const u8 {
         .VULKANPROCNV,
         => "*const fn () callconv(APIENTRY) void",
         .bitfield,
-        => "c_uint",
+        => "u32",
         .boolean,
         => "u8",
         .byte,
@@ -931,20 +931,19 @@ fn getTypeString(@"type": registry.Type.Name) []const u8 {
         .eglImageOES,
         => "opaque {}",
         .@"enum",
-        => "c_uint",
+        => "u32",
         .fixed,
         => "i32",
         .float,
         => "f32",
         .half,
         .halfARB,
-        => "u16",
         .halfNV,
-        => "c_ushort",
+        => "u16",
         .handleARB,
         => "if (builtin.os.tag.isDarwin()) usize else u32",
         .int,
-        => "c_int",
+        => "i32",
         .int64,
         .int64EXT,
         => "i64",
@@ -956,7 +955,7 @@ fn getTypeString(@"type": registry.Type.Name) []const u8 {
         .short,
         => "i16",
         .sizei,
-        => "c_int",
+        => "i32",
         .sizeiptr,
         .sizeiptrARB,
         => "isize",
@@ -965,7 +964,7 @@ fn getTypeString(@"type": registry.Type.Name) []const u8 {
         .ubyte,
         => "u8",
         .uint,
-        => "c_uint",
+        => "u32",
         .uint64,
         .uint64EXT,
         => "u64",
@@ -1097,7 +1096,7 @@ fn paramOverride(command: registry.Command.Name, param_index: usize) ?struct { [
         },
         .BufferSubData,
         => switch (param_index) {
-            3 => .{ "data", "?*const anyopaque" },
+            3 => .{ "data", "*const anyopaque" },
             else => null,
         },
         .BufferStorageExternalEXT,
@@ -3458,7 +3457,7 @@ fn paramOverride(command: registry.Command.Name, param_index: usize) ?struct { [
         },
         .NamedBufferSubData,
         => switch (param_index) {
-            3 => .{ "data", "?*const anyopaque" },
+            3 => .{ "data", "*const anyopaque" },
             else => null,
         },
         .NamedFramebufferDrawBuffers,
