@@ -902,5 +902,5 @@ pub const Extension = enum {
 };
 
 test {
-    @import("std").testing.refAllDeclsRecursive(@This());
+    @import("std").testing.refAllDecls(@This());
 }

@@ -305,7 +305,7 @@ function processApiRegistry ([System.Xml.XmlElement] $registry, [string] $rev) {
     '};'
     ''
     'test {'
-    '    @import("std").testing.refAllDeclsRecursive(@This());'
+    '    @import("std").testing.refAllDecls(@This());'
     '}'
 }
 
@@ -348,7 +348,7 @@ function processGeneratorOptions ([System.Xml.XmlElement] $registry, [string] $r
     '};'
     ''
     'test {'
-    '    @import("std").testing.refAllDeclsRecursive(@This());'
+    '    @import("std").testing.refAllDecls(@This());'
     '}'
 }
 
