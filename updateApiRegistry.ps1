@@ -24,7 +24,7 @@ function main {
         }
 
         # REUSE-IgnoreStart
-        if ($registry.comment -notmatch '(?m)^Copyright 2013-2025 The Khronos Group Inc\.\r?\nSPDX-License-Identifier: Apache-2\.0$') {
+        if ($registry.comment -cnotmatch '(?m)^Copyright 2013-2026 The Khronos Group Inc\.\r?\nSPDX-License-Identifier: Apache-2\.0$') {
             throw 'The OpenGL XML API Registry license notice has changed.'
         }
         # REUSE-IgnoreEnd
@@ -43,7 +43,7 @@ function main {
 
 function processApiRegistry ([System.Xml.XmlElement] $registry, [string] $rev) {
     # REUSE-IgnoreStart
-    '// © 2013-2025 The Khronos Group Inc.'
+    '// © 2013-2026 The Khronos Group Inc.'
     '// © 2024 Carl Åstholm'
     '// SPDX-License-Identifier: Apache-2.0 AND MIT'
     # REUSE-IgnoreEnd
@@ -63,7 +63,7 @@ function processApiRegistry ([System.Xml.XmlElement] $registry, [string] $rev) {
     | Select-Object -ExpandProperty Node
     | Select-Object -ExpandProperty name
     | ForEach-Object { stripPrefix $_ }
-    | Sort-Object { typeSortKey $_ }
+    | Sort-Object -Stable { typeSortKey $_ }
     | ForEach-Object { "@`"$_`"," }
     '    };'
     '};'
@@ -79,7 +79,7 @@ function processApiRegistry ([System.Xml.XmlElement] $registry, [string] $rev) {
     | Select-Object -ExpandProperty Node
     | Select-Object -ExpandProperty name -Unique
     | ForEach-Object { stripPrefix $_ }
-    | Sort-Object { constantSortKey $_ }
+    | Sort-Object -Stable { constantSortKey $_ }
     | ForEach-Object { "@`"$_`"," }
     '    };'
     '};'
@@ -95,7 +95,7 @@ function processApiRegistry ([System.Xml.XmlElement] $registry, [string] $rev) {
     | Select-Object -ExpandProperty Node
     | Select-Object -ExpandProperty name
     | ForEach-Object { stripPrefix $_ }
-    | Sort-Object { commandSortKey $_ }
+    | Sort-Object -Stable { commandSortKey $_ }
     | ForEach-Object { "@`"$_`"," }
     '    };'
     ''
@@ -134,7 +134,7 @@ function processApiRegistry ([System.Xml.XmlElement] $registry, [string] $rev) {
     | Select-Object -ExpandProperty Node
     | Select-Object -ExpandProperty name
     | ForEach-Object { stripPrefix $_ }
-    | Sort-Object { extensionSortKey $_ }
+    | Sort-Object -Stable { extensionSortKey $_ }
     | ForEach-Object { "@`"$_`"," }
     '    };'
     '};'
@@ -155,7 +155,7 @@ function processApiRegistry ([System.Xml.XmlElement] $registry, [string] $rev) {
     $registry
     | Select-Xml 'types/type'
     | Select-Object -ExpandProperty Node
-    | Sort-Object { typeSortKey (stripPrefix $_.name) }
+    | Sort-Object -Stable { typeSortKey (stripPrefix $_.name) }
     | ForEach-Object {
         '.{'
         ".name = .@`"$(stripPrefix $_.name)`""
@@ -168,11 +168,11 @@ function processApiRegistry ([System.Xml.XmlElement] $registry, [string] $rev) {
     $registry
     | Select-Xml 'enums/enum'
     | Select-Object -ExpandProperty Node
-    | Sort-Object { constantSortKey (stripPrefix $_.name) }, api
+    | Sort-Object -Stable { constantSortKey (stripPrefix $_.name) }, api
     | ForEach-Object {
         '.{'
         ".name = .@`"$(stripPrefix $_.name)`","
-        ".value = $(+"$($_.value -replace '\A0x', '0x0')n")"
+        ".value = $(+"$($_.value -creplace '\A0x', '0x0')n")"
         if ($_.api) { ", .api = .$($_.api)" }
         '},'
     }
@@ -182,7 +182,7 @@ function processApiRegistry ([System.Xml.XmlElement] $registry, [string] $rev) {
     $registry
     | Select-Xml 'commands/command'
     | Select-Object -ExpandProperty Node
-    | Sort-Object { commandSortKey (stripPrefix $_.proto.name) }
+    | Sort-Object -Stable { commandSortKey (stripPrefix $_.proto.name) }
     | ForEach-Object {
         '.{'
         ".name = .@`"$(stripPrefix $_.proto.name)`","
@@ -206,16 +206,16 @@ function processApiRegistry ([System.Xml.XmlElement] $registry, [string] $rev) {
     $registry
     | Select-Xml 'feature'
     | Select-Object -ExpandProperty Node
-    | Sort-Object api, number
+    | Sort-Object -Stable api, number
     | ForEach-Object {
         '.{'
         ".name = .$($_.api),"
-        ".version = .{ $($_.number -split '\.' -join ', ') },"
+        ".version = .{ $($_.number -csplit '\.' -join ', ') },"
         '.add = &.{'
         $_
         | Select-Xml 'require/*'
         | Select-Object -ExpandProperty Node
-        | Sort-Object {
+        | Sort-Object -Stable {
             $node = $_
             switch ($_.LocalName) {
                 'type' { "0$(typeSortKey (stripPrefix $node.name))" }
@@ -232,7 +232,7 @@ function processApiRegistry ([System.Xml.XmlElement] $registry, [string] $rev) {
                     'command' { '.command' }
                 }
             ) = .@`"$(stripPrefix $_.name)`" }"
-            if ($_.ParentNode.profile) { ", .profile = .$($_.ParentNode.profile -replace '-', '_')" }
+            if ($_.ParentNode.profile) { ", .profile = .$($_.ParentNode.profile -creplace '-', '_')" }
             '},'
         }
         '},'
@@ -240,7 +240,7 @@ function processApiRegistry ([System.Xml.XmlElement] $registry, [string] $rev) {
         $_
         | Select-Xml 'remove/*'
         | Select-Object -ExpandProperty Node
-        | Sort-Object {
+        | Sort-Object -Stable {
             $node = $_
             switch ($_.LocalName) {
                 'type' { "0$(typeSortKey (stripPrefix $node.name))" }
@@ -257,7 +257,7 @@ function processApiRegistry ([System.Xml.XmlElement] $registry, [string] $rev) {
                     'command' { '.command' }
                 }
             ) = .@`"$(stripPrefix $_.name)`" }"
-            if ($_.ParentNode.profile) { ", .profile = .$($_.ParentNode.profile -replace '-', '_')" }
+            if ($_.ParentNode.profile) { ", .profile = .$($_.ParentNode.profile -creplace '-', '_')" }
             '},'
         }
         '},'
@@ -269,16 +269,16 @@ function processApiRegistry ([System.Xml.XmlElement] $registry, [string] $rev) {
     $registry
     | Select-Xml 'extensions/extension'
     | Select-Object -ExpandProperty Node
-    | Sort-Object { extensionSortKey (stripPrefix $_.name) }
+    | Sort-Object -Stable { extensionSortKey (stripPrefix $_.name) }
     | ForEach-Object {
         '.{'
         ".name = .@`"$(stripPrefix $_.name)`","
-        ".apis = &.{ $(($_.supported -split '\|' -match '\Agl(es[12]|sc2)?\z' -replace '\A.*\z', '.$&' -join ', ') | Sort-Object) },"
+        ".apis = &.{ $(($_.supported -split '\|' -cmatch '\Agl(?:es[12]|sc2)?\z' -creplace '\A.*\z', '.$&' -join ', ') | Sort-Object -Stable) },"
         '.add = &.{'
         $_
         | Select-Xml 'require/*'
         | Select-Object -ExpandProperty Node
-        | Sort-Object {
+        | Sort-Object -Stable {
             $node = $_
             switch ($_.LocalName) {
                 'type' { "0$(typeSortKey (stripPrefix $node.name))" }
@@ -296,7 +296,7 @@ function processApiRegistry ([System.Xml.XmlElement] $registry, [string] $rev) {
                 }
             ) = .@`"$(stripPrefix $_.name)`" }"
             if ($_.ParentNode.api) { ", .api = .$($_.ParentNode.api)" }
-            if ($_.ParentNode.profile) { ", .profile = .$($_.ParentNode.profile -replace '-', '_')" }
+            if ($_.ParentNode.profile) { ", .profile = .$($_.ParentNode.profile -creplace '-', '_')" }
             '},'
         }
         '},'
@@ -311,7 +311,7 @@ function processApiRegistry ([System.Xml.XmlElement] $registry, [string] $rev) {
 
 function processGeneratorOptions ([System.Xml.XmlElement] $registry, [string] $rev) {
     # REUSE-IgnoreStart
-    '// © 2013-2025 The Khronos Group Inc.'
+    '// © 2013-2026 The Khronos Group Inc.'
     '// © 2024 Carl Åstholm'
     '// SPDX-License-Identifier: Apache-2.0 AND MIT'
     # REUSE-IgnoreEnd
@@ -331,7 +331,7 @@ function processGeneratorOptions ([System.Xml.XmlElement] $registry, [string] $r
     | Select-Xml 'feature'
     | Select-Object -ExpandProperty Node
     | Select-Object -ExpandProperty number -Unique
-    | Sort-Object
+    | Sort-Object -Stable
     | ForEach-Object { "@`"$_`"," }
     '};'
     ''
@@ -343,7 +343,7 @@ function processGeneratorOptions ([System.Xml.XmlElement] $registry, [string] $r
     | Select-Object -ExpandProperty Node
     | Select-Object -ExpandProperty name
     | ForEach-Object { stripPrefix $_ }
-    | Sort-Object { extensionSortKey $_ }
+    | Sort-Object -Stable { extensionSortKey $_ }
     | ForEach-Object { "@`"$_`"," }
     '};'
     ''
@@ -397,7 +397,7 @@ function constantSortKey([string] $str) {
 '@
     (
         (
-            [regex]::Replace($Matches.base, '[0-9]+', { param ($m) $m.Value.PadLeft(5, '0') }) -split '_'
+            [regex]::Replace($Matches.base, '[0-9]+', { param ($m) $m.Value.PadLeft(5, '0') }) -csplit '_'
             | ForEach-Object { basicSortKey $_ }
         ) -join '001'
     ) + "000$(switch ($Matches.extension) {
@@ -440,7 +440,7 @@ function commandSortKey ([string] $str) {
 '@
     (
         (
-            [regex]::Replace($Matches.base, '[0-9]+', { param ($m) $m.Value.PadLeft(5, '0') }) -split '_'
+            [regex]::Replace($Matches.base, '[0-9]+', { param ($m) $m.Value.PadLeft(5, '0') }) -csplit '_'
             | ForEach-Object {
                 (
                     $_ -csplit '(?<=[a-z])(?=[A-Z0-9])|(?<=[A-Z0-9])(?=[A-Z][a-z])'
@@ -505,7 +505,7 @@ function extensionSortKey([string] $str) {
         default { "004$(basicSortKey $_)" }
     })000$(
         (
-            [regex]::Replace($Matches.base, '[0-9]+', { param ($m) $m.Value.PadLeft(5, '0') }) -split '_' `
+            [regex]::Replace($Matches.base, '[0-9]+', { param ($m) $m.Value.PadLeft(5, '0') }) -csplit '_' `
             | ForEach-Object { basicSortKey $_ }
         ) -join '000'
     )"
@@ -521,11 +521,11 @@ function parseDecl ([string] $decl) {
         | Select-String '(struct\s+)?[^\s*]+|\*' -AllMatches
         | Select-Object -ExpandProperty Matches
         | Select-Object -ExpandProperty Value
-    if ($tokens[0] -eq 'const') {
+    if ($tokens[0] -ceq 'const') {
         $tokens[0], $tokens[1] = $tokens[1], $tokens[0]
     }
     $tokens[($tokens.Length - 2)..0] | ForEach-Object {
-        if ($_ -in @('void'; '*'; 'const')) {
+        if ($_ -cin @('void'; '*'; 'const')) {
             ".@`"$_`""
         } else {
             ".{ .type = .@`"$(stripPrefix $_)`" }"

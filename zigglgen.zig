@@ -122,6 +122,7 @@ const ApiVersionProfile = struct {
                 // The Core/Compatibility profiles were introduced in GL 3.2.
                 if (version[0] < 3 or version[0] == 3 and version[1] < 2) {
                     if (maybe_profile != null) return error.UnsupportedProfile;
+                    maybe_profile = .compatibility;
                 } else if (maybe_profile) |profile| switch (profile) {
                     .core, .compatibility => {},
                     else => return error.UnsupportedProfile,
@@ -405,7 +406,7 @@ fn renderCode(
 
     try writer.print("" ++
         // REUSE-IgnoreStart
-        \\// © 2013-2025 The Khronos Group Inc.
+        \\// © 2013-2026 The Khronos Group Inc.
         \\// © 2024 Carl Åstholm
         \\// SPDX-License-Identifier: Apache-2.0 AND MIT
         // REUSE-IgnoreEnd
