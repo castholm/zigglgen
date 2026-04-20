@@ -1815,6 +1815,11 @@ fn paramOverride(command: registry.Command.Name, param_index: usize) ?struct { [
             1 => .{ "pointer", "usize" },
             else => null,
         },
+        .EdgeFlagv,
+        => switch (param_index) {
+            0 => .{ "flag", "*const boolean" },
+            else => null,
+        },
         .Enable,
         => switch (param_index) {
             0 => .{ "target", "@\"enum\"" },
