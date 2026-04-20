@@ -1595,9 +1595,14 @@ fn paramOverride(command: registry.Command.Name, param_index: usize) ?struct { [
             2 => .{ "textures", "[*]uint" },
             else => null,
         },
+        .CreateTransformFeedbacks,
+        => switch (param_index) {
+            1 => .{ "ids", "[*]uint" },
+            else => null,
+        },
         .CreateVertexArrays,
         => switch (param_index) {
-            2 => .{ "arrays", "[*]uint" },
+            1 => .{ "arrays", "[*]uint" },
             else => null,
         },
         .DebugMessageCallback,
@@ -2451,7 +2456,7 @@ fn paramOverride(command: registry.Command.Name, param_index: usize) ?struct { [
         },
         .GetPointerv,
         => switch (param_index) {
-            2 => .{ "params", "*?*anyopaque" },
+            1 => .{ "params", "*?*anyopaque" },
             else => null,
         },
         .GetPolygonStipple,
