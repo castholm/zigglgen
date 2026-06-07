@@ -31,11 +31,11 @@ function main {
 
         processApiRegistry $registry $rev | Set-Content api_registry.zig
         zig fmt api_registry.zig
-        zig test api_registry.zig
 
         processGeneratorOptions $registry $rev | Set-Content GeneratorOptions.zig
         zig fmt GeneratorOptions.zig
-        zig test GeneratorOptions.zig
+
+        zig build test
     } finally {
         Remove-Item _OpenGL-Registry -Recurse -Force
     }
@@ -354,11 +354,11 @@ function processGeneratorOptions ([System.Xml.XmlElement] $registry, [string] $r
 
 $scriptName = $PSCommandPath | Split-Path -Leaf
 
-function stripPrefix([string] $str) {
+function stripPrefix ([string] $str) {
     $str -creplace '\A(GL_?|gl|struct\s+_*)', ''
 }
 
-function typeSortKey([string] $str) {
+function typeSortKey ([string] $str) {
     $null = $str -cmatch @'
 (?x)
 \A
@@ -387,7 +387,7 @@ function typeSortKey([string] $str) {
     })"
 }
 
-function constantSortKey([string] $str) {
+function constantSortKey ([string] $str) {
     $null = $str -cmatch @'
 (?x)
 \A
@@ -489,7 +489,7 @@ function commandSortKey ([string] $str) {
     })"
 }
 
-function extensionSortKey([string] $str) {
+function extensionSortKey ([string] $str) {
     $null = $str -cmatch @'
 (?x)
 \A
@@ -511,7 +511,7 @@ function extensionSortKey([string] $str) {
     )"
 }
 
-function basicSortKey([string] $str) {
+function basicSortKey ([string] $str) {
     (($str ?? '').GetEnumerator() | ForEach-Object { '{0:000}' -f ([ushort]$_ + 744) }) -join ''
 }
 
