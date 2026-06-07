@@ -3,9 +3,9 @@
 
 .{
     .name = .zigglgen,
-    .version = "0.5.0",
+    .version = "0.5.1",
     .fingerprint = 0xf697891b962028ce,
-    .minimum_zig_version = "0.15.2",
+    .minimum_zig_version = "0.16.0",
     .dependencies = .{},
     .paths = .{
         "GeneratorOptions.zig",

@@ -7,28 +7,10 @@ const builtin = @import("builtin");
 const Options = @import("GeneratorOptions.zig");
 const registry = @import("api_registry.zig");
 
-const std_process_Init = if (@hasDecl(std.process, "Init")) std.process.Init else struct {
-    minimal: struct {
-        args: struct {
-            fn iterateAllocator(_: @This(), gpa: std.mem.Allocator) !std.process.ArgIterator {
-                return std.process.argsWithAllocator(gpa);
-            }
-        } = .{},
-    } = .{},
-    arena: *std.heap.ArenaAllocator,
-};
+// TODO: Replace all uses of 'std.meta' with '@typeInfo' after 0.17
 
 /// Usage: `zigglen <api>-<version>[-<profile>] [<extension> ...]`
-pub const main = if (@hasDecl(std.process, "Init")) main016 else main015;
-
-fn main015() !void {
-    var arena_state = std.heap.ArenaAllocator.init(std.heap.page_allocator);
-    defer arena_state.deinit();
-
-    return main016(.{ .arena = &arena_state });
-}
-
-fn main016(init: std_process_Init) !void {
+pub fn main(init: std.process.Init) !void {
     const arena = init.arena.allocator();
 
     var arg_it = try init.minimal.args.iterateAllocator(arena);
@@ -82,16 +64,16 @@ const ApiVersionProfile = struct {
         const maybe_raw_profile = raw_it.next();
         if (raw_it.next() != null) return error.UnknownExtraField;
 
-        var api: registry.Api.Name = switch (inline for (@typeInfo(Options.Api).@"enum".fields) |field| {
-            if (std.mem.eql(u8, raw_api, field.name)) break @field(Options.Api, field.name);
+        var api: registry.Api.Name = switch (inline for (comptime std.meta.fieldNames(Options.Api)) |field_name| {
+            if (std.mem.eql(u8, raw_api, field_name)) break @field(Options.Api, field_name);
         } else return error.InvalidApi) {
             .gl => .gl,
             .gles => .gles2,
             .glsc => .glsc2,
         };
 
-        const version: [2]u8 = inline for (@typeInfo(Options.Version).@"enum".fields) |field| {
-            if (std.mem.eql(u8, raw_version, field.name)) {
+        const version: [2]u8 = inline for (comptime std.meta.fieldNames(Options.Version)) |field_name| {
+            if (std.mem.eql(u8, raw_version, field_name)) {
                 const dot = std.mem.indexOfScalar(u8, raw_version, '.').?;
                 break .{
                     std.fmt.parseUnsigned(u8, raw_version[0..dot], 10) catch unreachable,
@@ -101,8 +83,8 @@ const ApiVersionProfile = struct {
         } else return error.InvalidVersion;
 
         var maybe_profile: ?registry.ProfileName = if (maybe_raw_profile) |raw_profile|
-            switch (inline for (@typeInfo(Options.Profile).@"enum".fields) |field| {
-                if (std.mem.eql(u8, raw_profile, field.name)) break @field(Options.Profile, field.name);
+            switch (inline for (comptime std.meta.fieldNames(Options.Profile)) |field_name| {
+                if (std.mem.eql(u8, raw_profile, field_name)) break @field(Options.Profile, field_name);
             } else return error.InvalidProfile) {
                 .core => .core,
                 .compatibility => .compatibility,
@@ -172,13 +154,13 @@ fn parseExtension(raw: []const u8, api: registry.Api.Name) ParseExtensionError!r
     // Statically assert that 'api_registry.zig' and 'GeneratorOptions.zig' are in sync.
     comptime {
         @setEvalBranchQuota(100_000);
-        for (@typeInfo(registry.Extension.Name).@"enum".fields, @typeInfo(Options.Extension).@"enum".fields) |a, b| {
-            std.debug.assert(std.mem.eql(u8, a.name, b.name));
+        for (std.meta.fieldNames(registry.Extension.Name), std.meta.fieldNames(Options.Extension)) |a, b| {
+            std.debug.assert(std.mem.eql(u8, a, b));
         }
     }
 
-    const extension: registry.Extension.Name = inline for (@typeInfo(registry.Extension.Name).@"enum".fields) |field| {
-        if (std.mem.eql(u8, raw, field.name)) break @field(registry.Extension.Name, field.name);
+    const extension: registry.Extension.Name = inline for (comptime std.meta.fieldNames(registry.Extension.Name)) |field_name| {
+        if (std.mem.eql(u8, raw, field_name)) break @field(registry.Extension.Name, field_name);
     } else return error.InvalidExtension;
 
     // Validate extension
@@ -669,11 +651,11 @@ fn renderCode(
         \\    pub fn init(procs: *ProcTable, loader: anytype) bool {
         \\        @setEvalBranchQuota(1_000_000);
         \\        var success: u1 = 1;
-        \\        inline for (@typeInfo(ProcTable).@"struct".fields) |field_info| {
-        \\            switch (@typeInfo(field_info.type)) {
+        \\        inline for (comptime std.meta.fieldNames(ProcTable)) |field_name| {
+        \\            switch (@typeInfo(@FieldType(ProcTable, field_name))) {
         \\                .pointer => |ptr_info| switch (@typeInfo(ptr_info.child)) {
         \\                    .@"fn" => {
-        \\                        success &= @intFromBool(procs.initCommand(loader, field_info.name));
+        \\                        success &= @intFromBool(procs.initCommand(loader, field_name));
         \\                    },
         \\                    else => comptime unreachable,
         \\                },
@@ -684,14 +666,14 @@ fn renderCode(
             \\                .optional => |opt_info| switch (@typeInfo(opt_info.child)) {
             \\                    .pointer => |ptr_info| switch (@typeInfo(ptr_info.child)) {
             \\                        .@"fn" => {
-            \\                            @field(procs, field_info.name) = null;
+            \\                            @field(procs, field_name) = null;
             \\                        },
             \\                        else => comptime unreachable,
             \\                    },
             \\                    else => comptime unreachable,
             \\                },
             \\                .bool => {
-            \\                    @field(procs, field_info.name) = false;
+            \\                    @field(procs, field_name) = false;
             \\                },
             \\
         );
