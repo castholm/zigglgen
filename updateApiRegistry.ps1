@@ -29,10 +29,17 @@ function main {
         }
         # REUSE-IgnoreEnd
 
-        processApiRegistry $registry $rev | Set-Content api_registry.zig
+        processApiRegistry $registry $rev
+        | ForEach-Object {
+            # Correct for mistakes in the OES_fixed_point extension;
+            # see <https://github.com/KhronosGroup/OpenGL-Registry/issues/660>
+            $_ -creplace '\b(?:PixelStorex|GetPixelMapxv)\b','$&OES' -creplace '\bPixelMapx\b','$&vOES'
+        }
+        | Set-Content api_registry.zig
         zig fmt api_registry.zig
 
-        processGeneratorOptions $registry $rev | Set-Content GeneratorOptions.zig
+        processGeneratorOptions $registry $rev
+        | Set-Content GeneratorOptions.zig
         zig fmt GeneratorOptions.zig
 
         zig build test
@@ -191,10 +198,19 @@ function processApiRegistry ([System.Xml.XmlElement] $registry, [string] $rev) {
         | Select-Xml 'param'
         | Select-Object -ExpandProperty Node
         | ForEach-Object {
-            '.{'
-            ".name = `"$($_.name)`","
-            ".type_expr = &.{ $((parseDecl $_.InnerText) -join ', ') }"
-            '},'
+            # Correct for mistakes in the OES_fixed_point extension;
+            # see <https://github.com/KhronosGroup/OpenGL-Registry/issues/660>
+            if ($_.ParentNode.proto.name -ceq 'glPixelMapx' -and $_.name -ceq 'size') {
+                # This should be sizei, not int
+                '.{ .name = "size", .type_expr = &.{.{ .type = .sizei }} },'
+            } elseif ($_.ParentNode.proto.name -ceq 'glGetPixelMapxv' -and $_.name -ceq 'size') {
+                # This shouldn't be here at all
+            } else {
+                '.{'
+                ".name = `"$($_.name)`","
+                ".type_expr = &.{ $((parseDecl $_.InnerText) -join ', ') }"
+                '},'
+            }
         }
         '},'
         ".return_type_expr = &.{ $((parseDecl $_.proto.InnerText) -join ', ') },"
@@ -285,6 +301,11 @@ function processApiRegistry ([System.Xml.XmlElement] $registry, [string] $rev) {
                 'enum' { "1$(constantSortKey (stripPrefix $node.name))" }
                 'command' { "2$(commandSortKey (stripPrefix $node.name))" }
             }
+        }
+        | Where-Object {
+            # These are not part of the extension spec, but were once added to gl.xml by mistake
+            # and have remained there for backward compatibility when generating C headers.
+            -not ($_.ParentNode.ParentNode.name -ceq 'GL_OES_fixed_point' -and $_.ParentNode.api -ceq 'gles1')
         }
         | ForEach-Object {
             '.{'

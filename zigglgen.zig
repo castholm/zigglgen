@@ -2421,7 +2421,7 @@ fn paramOverride(command: registry.Command.Name, param_index: usize) ?struct { [
             3 => .{ "label", "[*]char" },
             else => null,
         },
-        .GetPixelMapxv,
+        .GetPixelMapxvOES,
         => switch (param_index) {
             1 => .{ "data", "?[*]fixed" },
             else => null,
@@ -3444,13 +3444,13 @@ fn paramOverride(command: registry.Command.Name, param_index: usize) ?struct { [
         },
         .ObjectLabel,
         => switch (param_index) {
-            3 => .{ "label", "[*]char" },
+            3 => .{ "label", "[*]const char" },
             else => null,
         },
         .ObjectPtrLabel,
         => switch (param_index) {
             0 => .{ "ptr", "*anyopaque" },
-            2 => .{ "label", "[*]char" },
+            2 => .{ "label", "[*]const char" },
             else => null,
         },
         .Ortho,
@@ -3468,7 +3468,7 @@ fn paramOverride(command: registry.Command.Name, param_index: usize) ?struct { [
             1 => .{ "values", "[*]const float" },
             else => null,
         },
-        .PixelMapx, // PixelMapxv
+        .PixelMapxvOES,
         => switch (param_index) {
             2 => .{ "values", "[*]const fixed" },
             else => null,
